@@ -18,6 +18,21 @@ function CodexLogo({ className }: { className: string }) {
   );
 }
 
+function GeminiLogo({ className }: { className: string }) {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" className={className}>
+      <path
+        d="M8 1.4l1.2 3.4 3.4 1.2-3.4 1.2L8 10.6 6.8 7.2 3.4 6l3.4-1.2L8 1.4z"
+        fill="#4F46E5"
+      />
+      <path
+        d="M12.2 8.9l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8.8-2.2z"
+        fill="#06B6D4"
+      />
+    </svg>
+  );
+}
+
 // OpenCode — official pixel-art "O" mark from anomalyco/opencode brand assets
 function OpenCodeLogo({ className }: { className: string }) {
   return (
@@ -85,6 +100,8 @@ export function ProviderLogo({
       return <ClaudeLogo className={className} />;
     case "codex":
       return <CodexLogo className={className} />;
+    case "gemini":
+      return <GeminiLogo className={className} />;
     case "opencode":
       return <OpenCodeLogo className={className} />;
     case "openclaw":

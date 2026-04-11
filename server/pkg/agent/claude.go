@@ -424,11 +424,36 @@ func isFilteredChildEnvKey(key string) bool {
 
 func detectCLIVersion(ctx context.Context, execPath string) (string, error) {
 	cmd := exec.CommandContext(ctx, execPath, "--version")
+	cmd.Env = buildEnv(map[string]string{
+		"PATH": ensureCLIPath(os.Getenv("PATH")),
+	})
 	data, err := cmd.Output()
 	if err != nil {
 		return "", fmt.Errorf("detect version for %s: %w", execPath, err)
 	}
 	return strings.TrimSpace(string(data)), nil
+}
+
+func ensureCLIPath(pathValue string) string {
+	if pathValue == "" {
+		pathValue = "/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+	}
+	required := []string{"/usr/local/bin", "/opt/homebrew/bin"}
+	for _, dir := range required {
+		if !pathHasDir(pathValue, dir) {
+			pathValue = dir + ":" + pathValue
+		}
+	}
+	return pathValue
+}
+
+func pathHasDir(pathValue, dir string) bool {
+	for _, entry := range strings.Split(pathValue, ":") {
+		if entry == dir {
+			return true
+		}
+	}
+	return false
 }
 
 // logWriter adapts a *slog.Logger to an io.Writer for capturing stderr.
