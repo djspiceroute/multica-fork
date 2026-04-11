@@ -11,6 +11,8 @@ import (
 var MinVersions = map[string]string{
 	"claude": "2.0.0",
 	"codex":  "0.100.0", // app-server --listen stdio:// added in 0.100.0
+	"gemini": "0.37.0",  // gemini ACP CLI baseline used by local daemon integration
+	"hermes": "0.1.0",   // Hermes ACP CLI baseline
 }
 
 // semver holds a parsed semantic version (major.minor.patch).

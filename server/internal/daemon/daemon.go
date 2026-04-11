@@ -230,15 +230,51 @@ func (d *Daemon) providerToRuntimeMap() map[string]string {
 func (d *Daemon) registerRuntimesForWorkspace(ctx context.Context, workspaceID string) (*RegisterResponse, error) {
 	var runtimes []map[string]string
 	for name, entry := range d.cfg.Agents {
+		backendType, backendErr := agent.BackendTypeForProvider(name)
+		if backendErr != nil {
+			d.logger.Warn("provider readiness", "provider", name, "path", entry.Path, "model", entry.Model, "ready", false, "reason", backendErr.Error())
+			continue
+		}
+		injectionMode := runtimeConfigInjectionMode(name)
+
 		version, err := agent.DetectVersion(ctx, entry.Path)
 		if err != nil {
+			d.logger.Warn("provider readiness",
+				"provider", name,
+				"path", entry.Path,
+				"version", "",
+				"backend", backendType,
+				"model", entry.Model,
+				"injection_mode", injectionMode,
+				"ready", false,
+				"reason", err.Error(),
+			)
 			d.logger.Warn("skip registering runtime", "name", name, "error", err)
 			continue
 		}
 		if err := agent.CheckMinVersion(name, version); err != nil {
+			d.logger.Warn("provider readiness",
+				"provider", name,
+				"path", entry.Path,
+				"version", version,
+				"backend", backendType,
+				"model", entry.Model,
+				"injection_mode", injectionMode,
+				"ready", false,
+				"reason", err.Error(),
+			)
 			d.logger.Warn("skip registering runtime: version too old", "name", name, "version", version, "error", err)
 			continue
 		}
+		d.logger.Info("provider readiness",
+			"provider", name,
+			"path", entry.Path,
+			"version", version,
+			"backend", backendType,
+			"model", entry.Model,
+			"injection_mode", injectionMode,
+			"ready", true,
+		)
 		displayName := strings.ToUpper(name[:1]) + name[1:]
 		if d.cfg.DeviceName != "" {
 			displayName = fmt.Sprintf("%s (%s)", displayName, d.cfg.DeviceName)
@@ -270,6 +306,17 @@ func (d *Daemon) registerRuntimesForWorkspace(ctx context.Context, workspaceID s
 		return nil, fmt.Errorf("register runtimes: empty response")
 	}
 	return resp, nil
+}
+
+func runtimeConfigInjectionMode(provider string) string {
+	switch provider {
+	case "claude":
+		return "CLAUDE.md"
+	case "codex", "gemini", "opencode", "openclaw":
+		return "AGENTS.md"
+	default:
+		return "none"
+	}
 }
 
 // configWatchLoop periodically checks for config file changes and reloads workspaces.

@@ -7,6 +7,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -18,6 +19,11 @@ import (
 	"github.com/multica-ai/multica/server/internal/logger"
 	db "github.com/multica-ai/multica/server/pkg/db/generated"
 	"github.com/multica-ai/multica/server/pkg/protocol"
+)
+
+const (
+	cliSyncHeader       = "X-Multica-CLI-Sync"
+	cliSyncSecretHeader = "X-Multica-CLI-Sync-Secret"
 )
 
 // IssueResponse is the JSON response for an issue.
@@ -1003,6 +1009,17 @@ func (h *Handler) UpdateIssue(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusInternalServerError, "failed to resolve dependency status")
 			return
 		}
+		if resolvedStatus == "done" {
+			canDone, denyReason, err := h.canTransitionIssueToDone(r.Context(), r, prevIssue, actorType)
+			if err != nil {
+				writeError(w, http.StatusInternalServerError, "failed to validate done transition")
+				return
+			}
+			if !canDone {
+				writeError(w, http.StatusConflict, denyReason)
+				return
+			}
+		}
 		params.Status = pgtype.Text{String: resolvedStatus, Valid: true}
 	}
 	if req.Priority != nil {
@@ -1503,6 +1520,53 @@ func (h *Handler) resolveIssueStatusByDependencies(ctx context.Context, issue db
 	}
 
 	return target, nil
+}
+
+func (h *Handler) canTransitionIssueToDone(ctx context.Context, r *http.Request, issue db.Issue, actorType string) (bool, string, error) {
+	hasMergedPR, err := h.hasMergedPRLink(ctx, issue.ID)
+	if err != nil {
+		return false, "", err
+	}
+	if !hasMergedPR {
+		return false, "cannot move to done without a linked merged PR", nil
+	}
+
+	if issue.AssigneeType.Valid && issue.AssigneeType.String == "agent" && issue.AssigneeID.Valid {
+		assignee, err := h.Queries.GetAgent(ctx, issue.AssigneeID)
+		if err == nil && strings.EqualFold(assignee.Role, "reviewer") {
+			return true, "", nil
+		}
+	}
+
+	if actorType == "member" && isTrustedCLISyncRequest(r) {
+		return true, "", nil
+	}
+
+	return false, "only reviewer-assigned issues or trusted CLI sync can move to done", nil
+}
+
+func (h *Handler) hasMergedPRLink(ctx context.Context, issueID pgtype.UUID) (bool, error) {
+	links, err := h.Queries.ListIssuePRLinks(ctx, issueID)
+	if err != nil {
+		return false, err
+	}
+	for _, link := range links {
+		if strings.EqualFold(link.PrState, "merged") {
+			return true, nil
+		}
+	}
+	return false, nil
+}
+
+func isTrustedCLISyncRequest(r *http.Request) bool {
+	if strings.TrimSpace(r.Header.Get(cliSyncHeader)) != "1" {
+		return false
+	}
+	expected := strings.TrimSpace(os.Getenv("MULTICA_CLI_SYNC_SECRET"))
+	if expected == "" {
+		return true
+	}
+	return strings.TrimSpace(r.Header.Get(cliSyncSecretHeader)) == expected
 }
 
 type BatchDeleteIssuesRequest struct {
