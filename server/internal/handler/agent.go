@@ -115,6 +115,7 @@ type AgentTaskResponse struct {
 type TaskAgentData struct {
 	ID           string                   `json:"id"`
 	Name         string                   `json:"name"`
+	Role         string                   `json:"role,omitempty"`
 	Instructions string                   `json:"instructions"`
 	Skills       []service.AgentSkillData `json:"skills,omitempty"`
 	CustomEnv    map[string]string        `json:"custom_env,omitempty"`

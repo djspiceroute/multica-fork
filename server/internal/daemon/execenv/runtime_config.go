@@ -123,15 +123,27 @@ func buildMetaSkillContent(provider string, ctx TaskContextForEnv) string {
 		b.WriteString("5. If the comment requests code changes or further work, do the work first, then reply with your results\n")
 		b.WriteString("6. Do NOT change the issue status unless the comment explicitly asks for it\n\n")
 	} else {
-		// Assignment-triggered: defer to agent Skills for workflow specifics.
+		// Assignment-triggered: role-specific workflow.
 		b.WriteString("You are responsible for managing the issue status throughout your work.\n\n")
 		fmt.Fprintf(&b, "1. Run `multica issue get %s --output json` to understand your task\n", ctx.IssueID)
 		fmt.Fprintf(&b, "2. Run `multica issue status %s in_progress`\n", ctx.IssueID)
 		b.WriteString("3. Read comments for additional context or human instructions\n")
-		b.WriteString("4. Follow your Skills and Agent Identity to determine how to complete this task.\n")
-		b.WriteString("   If no relevant skill applies, the default workflow is: understand the task → do the work → post a comment with results → update issue status.\n")
-		fmt.Fprintf(&b, "5. When done, run `multica issue status %s in_review`\n", ctx.IssueID)
-		fmt.Fprintf(&b, "6. If blocked, run `multica issue status %s blocked` and post a comment explaining why\n\n", ctx.IssueID)
+		if strings.EqualFold(ctx.AgentRole, "reviewer") {
+			b.WriteString("4. Reviewer workflow:\n")
+			b.WriteString("   a. Review the linked PR and run required checks for the target repository stack\n")
+			b.WriteString("   b. Add the approval label only when all review rules pass:\n")
+			b.WriteString("      `gh pr edit <number-or-url> --add-label ${MULTICA_AUTOMERGE_LABEL:-automerge-ok}`\n")
+			b.WriteString("   c. Run guarded merge (never merge directly):\n")
+			b.WriteString("      `bash scripts/reviewer-automerge.sh <number-or-url>`\n")
+			fmt.Fprintf(&b, "   d. If merge succeeds, set done: `multica issue status %s done`\n", ctx.IssueID)
+			fmt.Fprintf(&b, "   e. If merge is blocked, keep in_review and post reason comment on issue %s\n", ctx.IssueID)
+			fmt.Fprintf(&b, "5. If blocked, run `multica issue status %s blocked` only for genuine execution blockers and add a reason comment\n\n", ctx.IssueID)
+		} else {
+			b.WriteString("4. Follow your Skills and Agent Identity to determine how to complete this task.\n")
+			b.WriteString("   If no relevant skill applies, the default workflow is: understand the task -> do the work -> post a comment with results -> update issue status.\n")
+			fmt.Fprintf(&b, "5. When done, run `multica issue status %s in_review`\n", ctx.IssueID)
+			fmt.Fprintf(&b, "6. If blocked, run `multica issue status %s blocked` and post a comment explaining why\n\n", ctx.IssueID)
+		}
 	}
 
 	if len(ctx.AgentSkills) > 0 {
