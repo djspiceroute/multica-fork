@@ -1,7 +1,5 @@
 package daemon
 
-import "encoding/json"
-
 // AgentEntry describes a single available agent CLI.
 type AgentEntry struct {
 	Path  string // path to CLI binary
@@ -25,15 +23,15 @@ type RepoData struct {
 // Task represents a claimed task from the server.
 // Agent data (name, skills) is populated by the claim endpoint.
 type Task struct {
-	ID                    string     `json:"id"`
-	AgentID               string     `json:"agent_id"`
-	RuntimeID             string     `json:"runtime_id"`
-	IssueID               string     `json:"issue_id"`
-	WorkspaceID           string     `json:"workspace_id"`
-	Agent                 *AgentData `json:"agent,omitempty"`
-	Repos                 []RepoData `json:"repos,omitempty"`
-	PriorSessionID        string     `json:"prior_session_id,omitempty"`        // Claude session ID from a previous task on this issue
-	PriorWorkDir          string     `json:"prior_work_dir,omitempty"`          // work_dir from a previous task on this issue
+	ID               string     `json:"id"`
+	AgentID          string     `json:"agent_id"`
+	RuntimeID        string     `json:"runtime_id"`
+	IssueID          string     `json:"issue_id"`
+	WorkspaceID      string     `json:"workspace_id"`
+	Agent            *AgentData `json:"agent,omitempty"`
+	Repos            []RepoData `json:"repos,omitempty"`
+	PriorSessionID   string     `json:"prior_session_id,omitempty"`   // Claude session ID from a previous task on this issue
+	PriorWorkDir     string     `json:"prior_work_dir,omitempty"`     // work_dir from a previous task on this issue
 	TriggerCommentID      string     `json:"trigger_comment_id,omitempty"`      // comment that triggered this task
 	TriggerCommentContent string     `json:"trigger_comment_content,omitempty"` // content of the triggering comment
 	ChatSessionID         string     `json:"chat_session_id,omitempty"`         // non-empty for chat tasks
@@ -44,11 +42,10 @@ type Task struct {
 type AgentData struct {
 	ID           string            `json:"id"`
 	Name         string            `json:"name"`
+	Role         string            `json:"role,omitempty"`
 	Instructions string            `json:"instructions"`
 	Skills       []SkillData       `json:"skills"`
 	CustomEnv    map[string]string `json:"custom_env,omitempty"`
-	CustomArgs   []string          `json:"custom_args,omitempty"`
-	McpConfig    json.RawMessage   `json:"mcp_config,omitempty"`
 }
 
 // SkillData represents a structured skill for task execution.

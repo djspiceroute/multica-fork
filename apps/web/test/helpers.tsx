@@ -58,6 +58,7 @@ export const mockAgents: Agent[] = [
     custom_args: [],
     custom_env_redacted: false,
     visibility: "workspace",
+    role: "coder",
     max_concurrent_tasks: 3,
     owner_id: null,
     skills: [],

@@ -3,6 +3,7 @@ export type AgentStatus = "idle" | "working" | "blocked" | "error" | "offline";
 export type AgentRuntimeMode = "local" | "cloud";
 
 export type AgentVisibility = "workspace" | "private";
+export type AgentRole = "coder" | "reviewer";
 
 export interface RuntimeDevice {
   id: string;
@@ -54,6 +55,7 @@ export interface Agent {
   visibility: AgentVisibility;
   status: AgentStatus;
   max_concurrent_tasks: number;
+  role: AgentRole;
   owner_id: string | null;
   skills: Skill[];
   created_at: string;
@@ -73,6 +75,7 @@ export interface CreateAgentRequest {
   custom_args?: string[];
   visibility?: AgentVisibility;
   max_concurrent_tasks?: number;
+  role?: AgentRole;
 }
 
 export interface UpdateAgentRequest {
@@ -87,6 +90,7 @@ export interface UpdateAgentRequest {
   visibility?: AgentVisibility;
   status?: AgentStatus;
   max_concurrent_tasks?: number;
+  role?: AgentRole;
 }
 
 // Skills
