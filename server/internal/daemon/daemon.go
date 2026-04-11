@@ -879,10 +879,12 @@ func (d *Daemon) runTask(ctx context.Context, task Task, provider string, taskLo
 	}
 
 	agentName := "agent"
+	agentRole := ""
 	var skills []SkillData
 	var instructions string
 	if task.Agent != nil {
 		agentName = task.Agent.Name
+		agentRole = task.Agent.Role
 		skills = task.Agent.Skills
 		instructions = task.Agent.Instructions
 	}
@@ -894,6 +896,7 @@ func (d *Daemon) runTask(ctx context.Context, task Task, provider string, taskLo
 		IssueID:           task.IssueID,
 		TriggerCommentID:  task.TriggerCommentID,
 		AgentName:         agentName,
+		AgentRole:         agentRole,
 		AgentInstructions: instructions,
 		AgentSkills:       convertSkillsForEnv(skills),
 		Repos:             convertReposForEnv(task.Repos),
@@ -937,9 +940,16 @@ func (d *Daemon) runTask(ctx context.Context, task Task, provider string, taskLo
 		"MULTICA_SERVER_URL":   d.cfg.ServerBaseURL,
 		"MULTICA_DAEMON_PORT":  fmt.Sprintf("%d", d.cfg.HealthPort),
 		"MULTICA_WORKSPACE_ID": task.WorkspaceID,
+		"MULTICA_ISSUE_ID":     task.IssueID,
 		"MULTICA_AGENT_NAME":   agentName,
 		"MULTICA_AGENT_ID":     task.AgentID,
 		"MULTICA_TASK_ID":      task.ID,
+	}
+	if strategy := strings.TrimSpace(os.Getenv("MULTICA_AUTOMERGE_STRATEGY")); strategy != "" {
+		agentEnv["MULTICA_AUTOMERGE_STRATEGY"] = strategy
+	}
+	if label := strings.TrimSpace(os.Getenv("MULTICA_AUTOMERGE_LABEL")); label != "" {
+		agentEnv["MULTICA_AUTOMERGE_LABEL"] = label
 	}
 	// Ensure the multica CLI is on PATH inside the agent's environment.
 	// Some runtimes (e.g. Codex) run in an isolated sandbox that may not
