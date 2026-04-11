@@ -1,14 +1,21 @@
 // Package agent provides a unified interface for executing prompts via
-// coding agents (Claude Code, Codex, OpenCode, OpenClaw, Hermes, Pi). It mirrors the happy-cli AgentBackend
+// coding agents (Claude Code, Codex, Gemini, OpenCode, OpenClaw, Hermes). It mirrors the happy-cli AgentBackend
 // pattern, translated to idiomatic Go.
 package agent
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"time"
+)
+
+const (
+	BackendTypeClaude    = "claude-stream"
+	BackendTypeCodex     = "codex-jsonrpc"
+	BackendTypeHermesACP = "hermes-acp"
+	BackendTypeOpenCode  = "opencode-cli"
+	BackendTypeOpenClaw  = "openclaw-cli"
 )
 
 // Backend is the unified interface for executing prompts via coding agents.
@@ -26,9 +33,7 @@ type ExecOptions struct {
 	SystemPrompt    string
 	MaxTurns        int
 	Timeout         time.Duration
-	ResumeSessionID string          // if non-empty, resume a previous agent session
-	CustomArgs      []string        // additional CLI arguments appended to the agent command
-	McpConfig       json.RawMessage // if non-nil, MCP server config to pass via --mcp-config
+	ResumeSessionID string // if non-empty, resume a previous agent session
 }
 
 // Session represents a running agent execution.
@@ -85,13 +90,13 @@ type Result struct {
 
 // Config configures a Backend instance.
 type Config struct {
-	ExecutablePath string            // path to CLI binary (claude, codex, copilot, opencode, openclaw, hermes, gemini, or pi)
+	ExecutablePath string            // path to CLI binary (claude, codex, gemini, opencode, openclaw, or hermes)
 	Env            map[string]string // extra environment variables
 	Logger         *slog.Logger
 }
 
 // New creates a Backend for the given agent type.
-// Supported types: "claude", "codex", "copilot", "opencode", "openclaw", "hermes", "gemini", "pi", "cursor".
+// Supported types: "claude", "codex", "gemini", "opencode", "openclaw", "hermes".
 func New(agentType string, cfg Config) (Backend, error) {
 	if cfg.Logger == nil {
 		cfg.Logger = slog.Default()
@@ -102,51 +107,38 @@ func New(agentType string, cfg Config) (Backend, error) {
 		return &claudeBackend{cfg: cfg}, nil
 	case "codex":
 		return &codexBackend{cfg: cfg}, nil
-	case "copilot":
-		return &copilotBackend{cfg: cfg}, nil
+	case "gemini":
+		return &geminiBackend{cfg: cfg}, nil
 	case "opencode":
 		return &opencodeBackend{cfg: cfg}, nil
 	case "openclaw":
 		return &openclawBackend{cfg: cfg}, nil
 	case "hermes":
 		return &hermesBackend{cfg: cfg}, nil
-	case "gemini":
-		return &geminiBackend{cfg: cfg}, nil
-	case "pi":
-		return &piBackend{cfg: cfg}, nil
-	case "cursor":
-		return &cursorBackend{cfg: cfg}, nil
 	default:
-		return nil, fmt.Errorf("unknown agent type: %q (supported: claude, codex, copilot, opencode, openclaw, hermes, gemini, pi, cursor)", agentType)
+		return nil, fmt.Errorf("unknown agent type: %q (supported: claude, codex, gemini, opencode, openclaw, hermes)", agentType)
+	}
+}
+
+// BackendTypeForProvider resolves the execution backend type used for a provider.
+func BackendTypeForProvider(provider string) (string, error) {
+	switch provider {
+	case "claude":
+		return BackendTypeClaude, nil
+	case "codex":
+		return BackendTypeCodex, nil
+	case "gemini", "hermes":
+		return BackendTypeHermesACP, nil
+	case "opencode":
+		return BackendTypeOpenCode, nil
+	case "openclaw":
+		return BackendTypeOpenClaw, nil
+	default:
+		return "", fmt.Errorf("unknown provider %q", provider)
 	}
 }
 
 // DetectVersion runs the agent CLI with --version and returns the output.
 func DetectVersion(ctx context.Context, executablePath string) (string, error) {
 	return detectCLIVersion(ctx, executablePath)
-}
-
-// launchHeaders maps each supported agent type to the user-visible skeleton
-// that the daemon spawns before any custom_args are appended. This is
-// intentionally minimal — only the command + subcommand (or a short mode
-// label when there is no subcommand). Internal flags, transport values, and
-// environment variables are deliberately omitted so the string is a hint
-// about *what* users are extending, not a dump of the full command line.
-var launchHeaders = map[string]string{
-	"claude":   "claude (stream-json)",
-	"codex":    "codex app-server",
-	"copilot":  "copilot (json)",
-	"cursor":   "cursor-agent (stream-json)",
-	"gemini":   "gemini (stream-json)",
-	"hermes":   "hermes acp",
-	"openclaw": "openclaw agent (json)",
-	"opencode": "opencode run (json)",
-	"pi":       "pi (json mode)",
-}
-
-// LaunchHeader returns the user-visible launch skeleton for agentType, or an
-// empty string if the type is unknown. Callers render this as a preview so
-// users understand which command their custom_args get appended to.
-func LaunchHeader(agentType string) string {
-	return launchHeaders[agentType]
 }
