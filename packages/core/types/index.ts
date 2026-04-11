@@ -1,9 +1,10 @@
-export type { Issue, IssueStatus, IssuePriority, IssueAssigneeType, IssueReaction } from "./issue";
+export type { Issue, IssueStatus, IssuePriority, IssueAssigneeType, IssueReaction, IssuePRLink } from "./issue";
 export type {
   Agent,
   AgentStatus,
   AgentRuntimeMode,
   AgentVisibility,
+  AgentRole,
   AgentTask,
   AgentRuntime,
   RuntimeDevice,

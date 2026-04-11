@@ -91,6 +91,7 @@ func NewRouter(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus) chi.Route
 	r.Post("/auth/send-code", h.SendCode)
 	r.Post("/auth/verify-code", h.VerifyCode)
 	r.Post("/auth/google", h.GoogleLogin)
+	r.Post("/webhooks/github", h.HandleGitHubWebhook)
 
 	// Daemon API routes (require daemon token or valid user token)
 	r.Route("/api/daemon", func(r chi.Router) {
@@ -191,6 +192,8 @@ func NewRouter(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus) chi.Route
 					r.Delete("/reactions", h.RemoveIssueReaction)
 					r.Get("/attachments", h.ListAttachments)
 					r.Get("/children", h.ListChildIssues)
+					r.Get("/github-links", h.ListIssuePRLinks)
+					r.Post("/github-links", h.UpsertIssuePRLink)
 				})
 			})
 

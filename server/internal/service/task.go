@@ -610,10 +610,25 @@ func issueToMap(issue db.Issue, issuePrefix string) map[string]any {
 		"creator_type":    issue.CreatorType,
 		"creator_id":      util.UUIDToString(issue.CreatorID),
 		"parent_issue_id": util.UUIDToPtr(issue.ParentIssueID),
-		"position":        issue.Position,
-		"due_date":        util.TimestampToPtr(issue.DueDate),
-		"created_at":      util.TimestampToString(issue.CreatedAt),
-		"updated_at":      util.TimestampToString(issue.UpdatedAt),
+		"github_repo":     util.TextToPtr(issue.GithubRepo),
+		"github_issue_number": func() *int32 {
+			if !issue.GithubIssueNumber.Valid {
+				return nil
+			}
+			v := issue.GithubIssueNumber.Int32
+			return &v
+		}(),
+		"github_pr_number": func() *int32 {
+			if !issue.GithubPrNumber.Valid {
+				return nil
+			}
+			v := issue.GithubPrNumber.Int32
+			return &v
+		}(),
+		"position":   issue.Position,
+		"due_date":   util.TimestampToPtr(issue.DueDate),
+		"created_at": util.TimestampToString(issue.CreatedAt),
+		"updated_at": util.TimestampToString(issue.UpdatedAt),
 	}
 }
 
@@ -635,6 +650,7 @@ func agentToMap(a db.Agent) map[string]any {
 		"visibility":           a.Visibility,
 		"status":               a.Status,
 		"max_concurrent_tasks": a.MaxConcurrentTasks,
+		"role":                 a.Role,
 		"owner_id":             util.UUIDToPtr(a.OwnerID),
 		"skills":               []any{},
 		"created_at":           util.TimestampToString(a.CreatedAt),

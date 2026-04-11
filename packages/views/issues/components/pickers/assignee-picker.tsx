@@ -72,7 +72,7 @@ export function AssigneePicker({
     .filter((m) => m.name.toLowerCase().includes(query))
     .sort((a, b) => getFreq("member", b.user_id) - getFreq("member", a.user_id));
   const filteredAgents = agents
-    .filter((a) => !a.archived_at && a.name.toLowerCase().includes(query))
+    .filter((a) => !a.archived_at && a.role === "coder" && a.name.toLowerCase().includes(query))
     .sort((a, b) => getFreq("agent", b.id) - getFreq("agent", a.id));
 
   const isSelected = (type: string, id: string) =>

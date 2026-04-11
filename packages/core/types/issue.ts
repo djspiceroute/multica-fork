@@ -35,9 +35,25 @@ export interface Issue {
   creator_id: string;
   parent_issue_id: string | null;
   project_id: string | null;
+  github_repo?: string | null;
+  github_issue_number?: number | null;
+  github_pr_number?: number | null;
   position: number;
   due_date: string | null;
   reactions?: IssueReaction[];
+  created_at: string;
+  updated_at: string;
+}
+
+export interface IssuePRLink {
+  id: string;
+  issue_id: string;
+  github_repo: string;
+  pr_number: number;
+  pr_url: string;
+  pr_state: "open" | "closed" | "merged";
+  merged_at: string | null;
+  closed_at: string | null;
   created_at: string;
   updated_at: string;
 }

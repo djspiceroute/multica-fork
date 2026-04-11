@@ -22,49 +22,55 @@ import (
 
 // IssueResponse is the JSON response for an issue.
 type IssueResponse struct {
-	ID            string                  `json:"id"`
-	WorkspaceID   string                  `json:"workspace_id"`
-	Number        int32                   `json:"number"`
-	Identifier    string                  `json:"identifier"`
-	Title         string                  `json:"title"`
-	Description   *string                 `json:"description"`
-	Status        string                  `json:"status"`
-	Priority      string                  `json:"priority"`
-	AssigneeType  *string                 `json:"assignee_type"`
-	AssigneeID    *string                 `json:"assignee_id"`
-	CreatorType   string                  `json:"creator_type"`
-	CreatorID     string                  `json:"creator_id"`
-	ParentIssueID *string                 `json:"parent_issue_id"`
-	ProjectID     *string                 `json:"project_id"`
-	Position      float64                 `json:"position"`
-	DueDate       *string                 `json:"due_date"`
-	CreatedAt     string                  `json:"created_at"`
-	UpdatedAt     string                  `json:"updated_at"`
-	Reactions     []IssueReactionResponse `json:"reactions,omitempty"`
-	Attachments   []AttachmentResponse    `json:"attachments,omitempty"`
+	ID                string                  `json:"id"`
+	WorkspaceID       string                  `json:"workspace_id"`
+	Number            int32                   `json:"number"`
+	Identifier        string                  `json:"identifier"`
+	Title             string                  `json:"title"`
+	Description       *string                 `json:"description"`
+	Status            string                  `json:"status"`
+	Priority          string                  `json:"priority"`
+	AssigneeType      *string                 `json:"assignee_type"`
+	AssigneeID        *string                 `json:"assignee_id"`
+	CreatorType       string                  `json:"creator_type"`
+	CreatorID         string                  `json:"creator_id"`
+	ParentIssueID     *string                 `json:"parent_issue_id"`
+	ProjectID         *string                 `json:"project_id"`
+	GithubRepo        *string                 `json:"github_repo,omitempty"`
+	GithubIssueNumber *int32                  `json:"github_issue_number,omitempty"`
+	GithubPrNumber    *int32                  `json:"github_pr_number,omitempty"`
+	Position          float64                 `json:"position"`
+	DueDate           *string                 `json:"due_date"`
+	CreatedAt         string                  `json:"created_at"`
+	UpdatedAt         string                  `json:"updated_at"`
+	Reactions         []IssueReactionResponse `json:"reactions,omitempty"`
+	Attachments       []AttachmentResponse    `json:"attachments,omitempty"`
 }
 
 func issueToResponse(i db.Issue, issuePrefix string) IssueResponse {
 	identifier := issuePrefix + "-" + strconv.Itoa(int(i.Number))
 	return IssueResponse{
-		ID:            uuidToString(i.ID),
-		WorkspaceID:   uuidToString(i.WorkspaceID),
-		Number:        i.Number,
-		Identifier:    identifier,
-		Title:         i.Title,
-		Description:   textToPtr(i.Description),
-		Status:        i.Status,
-		Priority:      i.Priority,
-		AssigneeType:  textToPtr(i.AssigneeType),
-		AssigneeID:    uuidToPtr(i.AssigneeID),
-		CreatorType:   i.CreatorType,
-		CreatorID:     uuidToString(i.CreatorID),
-		ParentIssueID: uuidToPtr(i.ParentIssueID),
-		ProjectID:     uuidToPtr(i.ProjectID),
-		Position:      i.Position,
-		DueDate:       timestampToPtr(i.DueDate),
-		CreatedAt:     timestampToString(i.CreatedAt),
-		UpdatedAt:     timestampToString(i.UpdatedAt),
+		ID:                uuidToString(i.ID),
+		WorkspaceID:       uuidToString(i.WorkspaceID),
+		Number:            i.Number,
+		Identifier:        identifier,
+		Title:             i.Title,
+		Description:       textToPtr(i.Description),
+		Status:            i.Status,
+		Priority:          i.Priority,
+		AssigneeType:      textToPtr(i.AssigneeType),
+		AssigneeID:        uuidToPtr(i.AssigneeID),
+		CreatorType:       i.CreatorType,
+		CreatorID:         uuidToString(i.CreatorID),
+		ParentIssueID:     uuidToPtr(i.ParentIssueID),
+		ProjectID:         uuidToPtr(i.ProjectID),
+		GithubRepo:        textToPtr(i.GithubRepo),
+		GithubIssueNumber: int4ToPtr(i.GithubIssueNumber),
+		GithubPrNumber:    int4ToPtr(i.GithubPrNumber),
+		Position:          i.Position,
+		DueDate:           timestampToPtr(i.DueDate),
+		CreatedAt:         timestampToString(i.CreatedAt),
+		UpdatedAt:         timestampToString(i.UpdatedAt),
 	}
 }
 
@@ -72,46 +78,52 @@ func issueToResponse(i db.Issue, issuePrefix string) IssueResponse {
 func issueListRowToResponse(i db.ListIssuesRow, issuePrefix string) IssueResponse {
 	identifier := issuePrefix + "-" + strconv.Itoa(int(i.Number))
 	return IssueResponse{
-		ID:            uuidToString(i.ID),
-		WorkspaceID:   uuidToString(i.WorkspaceID),
-		Number:        i.Number,
-		Identifier:    identifier,
-		Title:         i.Title,
-		Status:        i.Status,
-		Priority:      i.Priority,
-		AssigneeType:  textToPtr(i.AssigneeType),
-		AssigneeID:    uuidToPtr(i.AssigneeID),
-		CreatorType:   i.CreatorType,
-		CreatorID:     uuidToString(i.CreatorID),
-		ParentIssueID: uuidToPtr(i.ParentIssueID),
-		ProjectID:     uuidToPtr(i.ProjectID),
-		Position:      i.Position,
-		DueDate:       timestampToPtr(i.DueDate),
-		CreatedAt:     timestampToString(i.CreatedAt),
-		UpdatedAt:     timestampToString(i.UpdatedAt),
+		ID:                uuidToString(i.ID),
+		WorkspaceID:       uuidToString(i.WorkspaceID),
+		Number:            i.Number,
+		Identifier:        identifier,
+		Title:             i.Title,
+		Status:            i.Status,
+		Priority:          i.Priority,
+		AssigneeType:      textToPtr(i.AssigneeType),
+		AssigneeID:        uuidToPtr(i.AssigneeID),
+		CreatorType:       i.CreatorType,
+		CreatorID:         uuidToString(i.CreatorID),
+		ParentIssueID:     uuidToPtr(i.ParentIssueID),
+		ProjectID:         uuidToPtr(i.ProjectID),
+		GithubRepo:        textToPtr(i.GithubRepo),
+		GithubIssueNumber: int4ToPtr(i.GithubIssueNumber),
+		GithubPrNumber:    int4ToPtr(i.GithubPrNumber),
+		Position:          i.Position,
+		DueDate:           timestampToPtr(i.DueDate),
+		CreatedAt:         timestampToString(i.CreatedAt),
+		UpdatedAt:         timestampToString(i.UpdatedAt),
 	}
 }
 
 func openIssueRowToResponse(i db.ListOpenIssuesRow, issuePrefix string) IssueResponse {
 	identifier := issuePrefix + "-" + strconv.Itoa(int(i.Number))
 	return IssueResponse{
-		ID:            uuidToString(i.ID),
-		WorkspaceID:   uuidToString(i.WorkspaceID),
-		Number:        i.Number,
-		Identifier:    identifier,
-		Title:         i.Title,
-		Status:        i.Status,
-		Priority:      i.Priority,
-		AssigneeType:  textToPtr(i.AssigneeType),
-		AssigneeID:    uuidToPtr(i.AssigneeID),
-		CreatorType:   i.CreatorType,
-		CreatorID:     uuidToString(i.CreatorID),
-		ParentIssueID: uuidToPtr(i.ParentIssueID),
-		ProjectID:     uuidToPtr(i.ProjectID),
-		Position:      i.Position,
-		DueDate:       timestampToPtr(i.DueDate),
-		CreatedAt:     timestampToString(i.CreatedAt),
-		UpdatedAt:     timestampToString(i.UpdatedAt),
+		ID:                uuidToString(i.ID),
+		WorkspaceID:       uuidToString(i.WorkspaceID),
+		Number:            i.Number,
+		Identifier:        identifier,
+		Title:             i.Title,
+		Status:            i.Status,
+		Priority:          i.Priority,
+		AssigneeType:      textToPtr(i.AssigneeType),
+		AssigneeID:        uuidToPtr(i.AssigneeID),
+		CreatorType:       i.CreatorType,
+		CreatorID:         uuidToString(i.CreatorID),
+		ParentIssueID:     uuidToPtr(i.ParentIssueID),
+		ProjectID:         uuidToPtr(i.ProjectID),
+		GithubRepo:        textToPtr(i.GithubRepo),
+		GithubIssueNumber: int4ToPtr(i.GithubIssueNumber),
+		GithubPrNumber:    int4ToPtr(i.GithubPrNumber),
+		Position:          i.Position,
+		DueDate:           timestampToPtr(i.DueDate),
+		CreatedAt:         timestampToString(i.CreatedAt),
+		UpdatedAt:         timestampToString(i.UpdatedAt),
 	}
 }
 
@@ -728,16 +740,19 @@ func (h *Handler) ListChildIssues(w http.ResponseWriter, r *http.Request) {
 }
 
 type CreateIssueRequest struct {
-	Title         string   `json:"title"`
-	Description   *string  `json:"description"`
-	Status        string   `json:"status"`
-	Priority      string   `json:"priority"`
-	AssigneeType  *string  `json:"assignee_type"`
-	AssigneeID    *string  `json:"assignee_id"`
-	ParentIssueID *string  `json:"parent_issue_id"`
-	ProjectID     *string  `json:"project_id"`
-	DueDate       *string  `json:"due_date"`
-	AttachmentIDs []string `json:"attachment_ids,omitempty"`
+	Title             string   `json:"title"`
+	Description       *string  `json:"description"`
+	Status            string   `json:"status"`
+	Priority          string   `json:"priority"`
+	AssigneeType      *string  `json:"assignee_type"`
+	AssigneeID        *string  `json:"assignee_id"`
+	ParentIssueID     *string  `json:"parent_issue_id"`
+	ProjectID         *string  `json:"project_id"`
+	GithubRepo        *string  `json:"github_repo,omitempty"`
+	GithubIssueNumber *int32   `json:"github_issue_number,omitempty"`
+	GithubPrNumber    *int32   `json:"github_pr_number,omitempty"`
+	DueDate           *string  `json:"due_date"`
+	AttachmentIDs     []string `json:"attachment_ids,omitempty"`
 }
 
 func (h *Handler) CreateIssue(w http.ResponseWriter, r *http.Request) {
@@ -850,6 +865,24 @@ func (h *Handler) CreateIssue(w http.ResponseWriter, r *http.Request) {
 			}
 			return pgtype.UUID{}
 		}(),
+		GithubRepo: func() pgtype.Text {
+			if req.GithubRepo != nil {
+				return pgtype.Text{String: strings.TrimSpace(*req.GithubRepo), Valid: true}
+			}
+			return pgtype.Text{}
+		}(),
+		GithubIssueNumber: func() pgtype.Int4 {
+			if req.GithubIssueNumber != nil {
+				return pgtype.Int4{Int32: *req.GithubIssueNumber, Valid: true}
+			}
+			return pgtype.Int4{}
+		}(),
+		GithubPrNumber: func() pgtype.Int4 {
+			if req.GithubPrNumber != nil {
+				return pgtype.Int4{Int32: *req.GithubPrNumber, Valid: true}
+			}
+			return pgtype.Int4{}
+		}(),
 	})
 	if err != nil {
 		slog.Warn("create issue failed", append(logger.RequestAttrs(r), "error", err, "workspace_id", workspaceID)...)
@@ -898,16 +931,19 @@ func (h *Handler) CreateIssue(w http.ResponseWriter, r *http.Request) {
 }
 
 type UpdateIssueRequest struct {
-	Title         *string  `json:"title"`
-	Description   *string  `json:"description"`
-	Status        *string  `json:"status"`
-	Priority      *string  `json:"priority"`
-	AssigneeType  *string  `json:"assignee_type"`
-	AssigneeID    *string  `json:"assignee_id"`
-	Position      *float64 `json:"position"`
-	DueDate       *string  `json:"due_date"`
-	ParentIssueID *string  `json:"parent_issue_id"`
-	ProjectID     *string  `json:"project_id"`
+	Title             *string  `json:"title"`
+	Description       *string  `json:"description"`
+	Status            *string  `json:"status"`
+	Priority          *string  `json:"priority"`
+	AssigneeType      *string  `json:"assignee_type"`
+	AssigneeID        *string  `json:"assignee_id"`
+	Position          *float64 `json:"position"`
+	DueDate           *string  `json:"due_date"`
+	ParentIssueID     *string  `json:"parent_issue_id"`
+	ProjectID         *string  `json:"project_id"`
+	GithubRepo        *string  `json:"github_repo,omitempty"`
+	GithubIssueNumber *int32   `json:"github_issue_number,omitempty"`
+	GithubPrNumber    *int32   `json:"github_pr_number,omitempty"`
 }
 
 func (h *Handler) UpdateIssue(w http.ResponseWriter, r *http.Request) {
@@ -1043,6 +1079,15 @@ func (h *Handler) UpdateIssue(w http.ResponseWriter, r *http.Request) {
 			params.ProjectID = pgtype.UUID{Valid: false}
 		}
 	}
+	if req.GithubRepo != nil {
+		params.GithubRepo = pgtype.Text{String: strings.TrimSpace(*req.GithubRepo), Valid: true}
+	}
+	if req.GithubIssueNumber != nil {
+		params.GithubIssueNumber = pgtype.Int4{Int32: *req.GithubIssueNumber, Valid: true}
+	}
+	if req.GithubPrNumber != nil {
+		params.GithubPrNumber = pgtype.Int4{Int32: *req.GithubPrNumber, Valid: true}
+	}
 
 	// Enforce agent visibility: private agents can only be assigned by owner/admin.
 	if req.AssigneeType != nil && *req.AssigneeType == "agent" && req.AssigneeID != nil {
@@ -1060,17 +1105,27 @@ func (h *Handler) UpdateIssue(w http.ResponseWriter, r *http.Request) {
 	}
 
 	prefix := h.getIssuePrefix(r.Context(), issue.WorkspaceID)
-	resp := issueToResponse(issue, prefix)
 	slog.Info("issue updated", append(logger.RequestAttrs(r), "issue_id", id, "workspace_id", workspaceID)...)
 
-	assigneeChanged := (req.AssigneeType != nil || req.AssigneeID != nil) &&
-		(prevIssue.AssigneeType.String != issue.AssigneeType.String || uuidToString(prevIssue.AssigneeID) != uuidToString(issue.AssigneeID))
 	statusChanged := req.Status != nil && prevIssue.Status != issue.Status
 	priorityChanged := req.Priority != nil && prevIssue.Priority != issue.Priority
-	descriptionChanged := req.Description != nil && textToPtr(prevIssue.Description) != resp.Description
 	titleChanged := req.Title != nil && prevIssue.Title != issue.Title
 	prevDueDate := timestampToPtr(prevIssue.DueDate)
-	dueDateChanged := prevDueDate != resp.DueDate && (prevDueDate == nil) != (resp.DueDate == nil) ||
+	dueDateChanged := false
+
+	// Reviewer handoff: when an issue moves into review from a coder assignment,
+	// automatically assign the first active reviewer agent in the workspace.
+	if statusChanged && issue.Status == "in_review" {
+		if reassigned, err := h.handoffToReviewer(r.Context(), issue); err == nil && reassigned != nil {
+			issue = *reassigned
+		}
+	}
+
+	resp := issueToResponse(issue, prefix)
+	assigneeChanged := prevIssue.AssigneeType.String != issue.AssigneeType.String ||
+		uuidToString(prevIssue.AssigneeID) != uuidToString(issue.AssigneeID)
+	descriptionChanged := req.Description != nil && textToPtr(prevIssue.Description) != resp.Description
+	dueDateChanged = prevDueDate != resp.DueDate && (prevDueDate == nil) != (resp.DueDate == nil) ||
 		(prevDueDate != nil && resp.DueDate != nil && *prevDueDate != *resp.DueDate)
 
 	h.publish(protocol.EventIssueUpdated, workspaceID, actorType, actorID, map[string]any{
@@ -1091,6 +1146,9 @@ func (h *Handler) UpdateIssue(w http.ResponseWriter, r *http.Request) {
 		"creator_type":        prevIssue.CreatorType,
 		"creator_id":          uuidToString(prevIssue.CreatorID),
 	})
+	if statusChanged && issue.Status == "done" {
+		go h.closeLinkedGitHubIssueBestEffort(issue)
+	}
 
 	// Reconcile task queue when assignee changes (not on status changes —
 	// agents manage issue status themselves via the CLI).
@@ -1103,6 +1161,36 @@ func (h *Handler) UpdateIssue(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, resp)
+}
+
+func (h *Handler) handoffToReviewer(ctx context.Context, issue db.Issue) (*db.Issue, error) {
+	if !issue.AssigneeType.Valid || issue.AssigneeType.String != "agent" || !issue.AssigneeID.Valid {
+		return nil, nil
+	}
+	assignee, err := h.Queries.GetAgent(ctx, issue.AssigneeID)
+	if err != nil || assignee.Role != "coder" {
+		return nil, nil
+	}
+	reviewers, err := h.Queries.ListActiveReviewerAgentsByWorkspace(ctx, issue.WorkspaceID)
+	if err != nil || len(reviewers) == 0 {
+		return nil, err
+	}
+	next := reviewers[0]
+	if uuidToString(next.ID) == uuidToString(issue.AssigneeID) {
+		return nil, nil
+	}
+	updated, err := h.Queries.UpdateIssue(ctx, db.UpdateIssueParams{
+		ID:            issue.ID,
+		AssigneeType:  pgtype.Text{String: "agent", Valid: true},
+		AssigneeID:    next.ID,
+		DueDate:       issue.DueDate,
+		ParentIssueID: issue.ParentIssueID,
+		ProjectID:     issue.ProjectID,
+	})
+	if err != nil {
+		return nil, err
+	}
+	return &updated, nil
 }
 
 // canAssignAgent checks whether the requesting user is allowed to assign issues
@@ -1288,6 +1376,15 @@ func (h *Handler) BatchUpdateIssues(w http.ResponseWriter, r *http.Request) {
 		if req.Updates.Position != nil {
 			params.Position = pgtype.Float8{Float64: *req.Updates.Position, Valid: true}
 		}
+		if req.Updates.GithubRepo != nil {
+			params.GithubRepo = pgtype.Text{String: strings.TrimSpace(*req.Updates.GithubRepo), Valid: true}
+		}
+		if req.Updates.GithubIssueNumber != nil {
+			params.GithubIssueNumber = pgtype.Int4{Int32: *req.Updates.GithubIssueNumber, Valid: true}
+		}
+		if req.Updates.GithubPrNumber != nil {
+			params.GithubPrNumber = pgtype.Int4{Int32: *req.Updates.GithubPrNumber, Valid: true}
+		}
 		if _, ok := rawUpdates["assignee_type"]; ok {
 			if req.Updates.AssigneeType != nil {
 				params.AssigneeType = pgtype.Text{String: *req.Updates.AssigneeType, Valid: true}
@@ -1342,6 +1439,9 @@ func (h *Handler) BatchUpdateIssues(w http.ResponseWriter, r *http.Request) {
 			"status_changed":   statusChanged,
 			"priority_changed": priorityChanged,
 		})
+		if statusChanged && issue.Status == "done" {
+			go h.closeLinkedGitHubIssueBestEffort(issue)
+		}
 
 		if assigneeChanged {
 			h.TaskService.CancelTasksForIssue(r.Context(), issue.ID)
