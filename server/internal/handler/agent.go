@@ -27,6 +27,7 @@ type AgentResponse struct {
 	Visibility         string            `json:"visibility"`
 	Status             string            `json:"status"`
 	MaxConcurrentTasks int32             `json:"max_concurrent_tasks"`
+	Role               string            `json:"role"`
 	OwnerID            *string           `json:"owner_id"`
 	Skills             []SkillResponse   `json:"skills"`
 	CreatedAt          string            `json:"created_at"`
@@ -68,6 +69,7 @@ func agentToResponse(a db.Agent) AgentResponse {
 		Visibility:         a.Visibility,
 		Status:             a.Status,
 		MaxConcurrentTasks: a.MaxConcurrentTasks,
+		Role:               a.Role,
 		OwnerID:            uuidToPtr(a.OwnerID),
 		Skills:             []SkillResponse{},
 		CreatedAt:          timestampToString(a.CreatedAt),
@@ -85,22 +87,22 @@ type RepoData struct {
 }
 
 type AgentTaskResponse struct {
-	ID             string         `json:"id"`
-	AgentID        string         `json:"agent_id"`
-	RuntimeID      string         `json:"runtime_id"`
-	IssueID        string         `json:"issue_id"`
-	WorkspaceID    string         `json:"workspace_id"`
-	Status         string         `json:"status"`
-	Priority       int32          `json:"priority"`
-	DispatchedAt   *string        `json:"dispatched_at"`
-	StartedAt      *string        `json:"started_at"`
-	CompletedAt    *string        `json:"completed_at"`
-	Result         any            `json:"result"`
-	Error          *string        `json:"error"`
-	Agent          *TaskAgentData `json:"agent,omitempty"`
-	Repos          []RepoData     `json:"repos,omitempty"`
-	CreatedAt      string         `json:"created_at"`
-	PriorSessionID   string         `json:"prior_session_id,omitempty"`    // session ID from a previous task on same issue
+	ID               string         `json:"id"`
+	AgentID          string         `json:"agent_id"`
+	RuntimeID        string         `json:"runtime_id"`
+	IssueID          string         `json:"issue_id"`
+	WorkspaceID      string         `json:"workspace_id"`
+	Status           string         `json:"status"`
+	Priority         int32          `json:"priority"`
+	DispatchedAt     *string        `json:"dispatched_at"`
+	StartedAt        *string        `json:"started_at"`
+	CompletedAt      *string        `json:"completed_at"`
+	Result           any            `json:"result"`
+	Error            *string        `json:"error"`
+	Agent            *TaskAgentData `json:"agent,omitempty"`
+	Repos            []RepoData     `json:"repos,omitempty"`
+	CreatedAt        string         `json:"created_at"`
+	PriorSessionID   string         `json:"prior_session_id,omitempty"`   // session ID from a previous task on same issue
 	PriorWorkDir     string         `json:"prior_work_dir,omitempty"`     // work_dir from a previous task on same issue
 	TriggerCommentID      *string        `json:"trigger_comment_id,omitempty"`      // comment that triggered this task
 	TriggerCommentContent string         `json:"trigger_comment_content,omitempty"` // content of the triggering comment
@@ -124,16 +126,16 @@ func taskToResponse(t db.AgentTaskQueue) AgentTaskResponse {
 		json.Unmarshal(t.Result, &result)
 	}
 	return AgentTaskResponse{
-		ID:           uuidToString(t.ID),
-		AgentID:      uuidToString(t.AgentID),
-		RuntimeID:    uuidToString(t.RuntimeID),
-		IssueID:      uuidToString(t.IssueID),
-		Status:       t.Status,
-		Priority:     t.Priority,
-		DispatchedAt: timestampToPtr(t.DispatchedAt),
-		StartedAt:    timestampToPtr(t.StartedAt),
-		CompletedAt:  timestampToPtr(t.CompletedAt),
-		Result:       result,
+		ID:               uuidToString(t.ID),
+		AgentID:          uuidToString(t.AgentID),
+		RuntimeID:        uuidToString(t.RuntimeID),
+		IssueID:          uuidToString(t.IssueID),
+		Status:           t.Status,
+		Priority:         t.Priority,
+		DispatchedAt:     timestampToPtr(t.DispatchedAt),
+		StartedAt:        timestampToPtr(t.StartedAt),
+		CompletedAt:      timestampToPtr(t.CompletedAt),
+		Result:           result,
 		Error:            textToPtr(t.Error),
 		CreatedAt:        timestampToString(t.CreatedAt),
 		TriggerCommentID: uuidToPtr(t.TriggerCommentID),
@@ -218,6 +220,7 @@ type CreateAgentRequest struct {
 	CustomEnv          map[string]string `json:"custom_env"`
 	Visibility         string            `json:"visibility"`
 	MaxConcurrentTasks int32             `json:"max_concurrent_tasks"`
+	Role               string            `json:"role,omitempty"`
 }
 
 func (h *Handler) CreateAgent(w http.ResponseWriter, r *http.Request) {
@@ -247,6 +250,13 @@ func (h *Handler) CreateAgent(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.MaxConcurrentTasks == 0 {
 		req.MaxConcurrentTasks = 6
+	}
+	if req.Role == "" {
+		req.Role = "coder"
+	}
+	if req.Role != "coder" && req.Role != "reviewer" {
+		writeError(w, http.StatusBadRequest, "role must be coder or reviewer")
+		return
 	}
 
 	runtime, err := h.Queries.GetAgentRuntimeForWorkspace(r.Context(), db.GetAgentRuntimeForWorkspaceParams{
@@ -281,6 +291,7 @@ func (h *Handler) CreateAgent(w http.ResponseWriter, r *http.Request) {
 		MaxConcurrentTasks: req.MaxConcurrentTasks,
 		OwnerID:            parseUUID(ownerID),
 		CustomEnv:          ce,
+		Role:               req.Role,
 	})
 	if err != nil {
 		slog.Warn("create agent failed", append(logger.RequestAttrs(r), "error", err, "workspace_id", workspaceID)...)
@@ -300,8 +311,6 @@ func (h *Handler) CreateAgent(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, resp)
 }
 
-
-
 type UpdateAgentRequest struct {
 	Name               *string            `json:"name"`
 	Description        *string            `json:"description"`
@@ -313,6 +322,7 @@ type UpdateAgentRequest struct {
 	Visibility         *string            `json:"visibility"`
 	Status             *string            `json:"status"`
 	MaxConcurrentTasks *int32             `json:"max_concurrent_tasks"`
+	Role               *string            `json:"role,omitempty"`
 }
 
 // canManageAgent checks whether the current user can update or archive an agent.
@@ -392,6 +402,13 @@ func (h *Handler) UpdateAgent(w http.ResponseWriter, r *http.Request) {
 	}
 	if req.MaxConcurrentTasks != nil {
 		params.MaxConcurrentTasks = pgtype.Int4{Int32: *req.MaxConcurrentTasks, Valid: true}
+	}
+	if req.Role != nil {
+		if *req.Role != "coder" && *req.Role != "reviewer" {
+			writeError(w, http.StatusBadRequest, "role must be coder or reviewer")
+			return
+		}
+		params.Role = pgtype.Text{String: *req.Role, Valid: true}
 	}
 
 	agent, err := h.Queries.UpdateAgent(r.Context(), params)

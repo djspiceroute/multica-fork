@@ -10,6 +10,8 @@ import {
   Lock,
   Camera,
   ChevronDown,
+  ShieldCheck,
+  Wrench,
 } from "lucide-react";
 import type { Agent, AgentVisibility, RuntimeDevice } from "@multica/core/types";
 import {
@@ -39,6 +41,7 @@ export function SettingsTab({
   const [visibility, setVisibility] = useState<AgentVisibility>(agent.visibility);
   const [maxTasks, setMaxTasks] = useState(agent.max_concurrent_tasks);
   const [selectedRuntimeId, setSelectedRuntimeId] = useState(agent.runtime_id);
+  const [role, setRole] = useState(agent.role);
   const [runtimeOpen, setRuntimeOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const { upload, uploading } = useFileUpload(api);
@@ -65,7 +68,8 @@ export function SettingsTab({
     description !== (agent.description ?? "") ||
     visibility !== agent.visibility ||
     maxTasks !== agent.max_concurrent_tasks ||
-    selectedRuntimeId !== agent.runtime_id;
+    selectedRuntimeId !== agent.runtime_id ||
+    role !== agent.role;
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -81,6 +85,7 @@ export function SettingsTab({
         visibility,
         max_concurrent_tasks: maxTasks,
         runtime_id: selectedRuntimeId,
+        role,
       });
       toast.success("Settings saved");
     } catch {
@@ -173,6 +178,42 @@ export function SettingsTab({
             <div className="text-left">
               <div className="font-medium">Private</div>
               <div className="text-xs text-muted-foreground">Only you can assign</div>
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <div>
+        <Label className="text-xs text-muted-foreground">Role</Label>
+        <div className="mt-1.5 flex gap-2">
+          <button
+            type="button"
+            onClick={() => setRole("coder")}
+            className={`flex flex-1 items-center gap-2 rounded-lg border px-3 py-2.5 text-sm transition-colors ${
+              role === "coder"
+                ? "border-primary bg-primary/5"
+                : "border-border hover:bg-muted"
+            }`}
+          >
+            <Wrench className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <div className="text-left">
+              <div className="font-medium">Coder</div>
+              <div className="text-xs text-muted-foreground">Implements issue work</div>
+            </div>
+          </button>
+          <button
+            type="button"
+            onClick={() => setRole("reviewer")}
+            className={`flex flex-1 items-center gap-2 rounded-lg border px-3 py-2.5 text-sm transition-colors ${
+              role === "reviewer"
+                ? "border-primary bg-primary/5"
+                : "border-border hover:bg-muted"
+            }`}
+          >
+            <ShieldCheck className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <div className="text-left">
+              <div className="font-medium">Reviewer</div>
+              <div className="text-xs text-muted-foreground">Reviews in-review issues</div>
             </div>
           </button>
         </div>

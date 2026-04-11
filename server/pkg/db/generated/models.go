@@ -37,7 +37,7 @@ type Agent struct {
 	Instructions       string             `json:"instructions"`
 	ArchivedAt         pgtype.Timestamptz `json:"archived_at"`
 	ArchivedBy         pgtype.UUID        `json:"archived_by"`
-	CustomEnv          []byte             `json:"custom_env"`
+	Role               string             `json:"role"`
 }
 
 type AgentRuntime struct {
@@ -116,7 +116,6 @@ type ChatSession struct {
 	Status      string             `json:"status"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
-	UnreadSince pgtype.Timestamptz `json:"unread_since"`
 }
 
 type Comment struct {
@@ -200,6 +199,9 @@ type Issue struct {
 	UpdatedAt          pgtype.Timestamptz `json:"updated_at"`
 	Number             int32              `json:"number"`
 	ProjectID          pgtype.UUID        `json:"project_id"`
+	GithubRepo         pgtype.Text        `json:"github_repo"`
+	GithubIssueNumber  pgtype.Int4        `json:"github_issue_number"`
+	GithubPrNumber     pgtype.Int4        `json:"github_pr_number"`
 }
 
 type IssueDependency struct {
@@ -214,6 +216,19 @@ type IssueLabel struct {
 	WorkspaceID pgtype.UUID `json:"workspace_id"`
 	Name        string      `json:"name"`
 	Color       string      `json:"color"`
+}
+
+type IssuePrLink struct {
+	ID         pgtype.UUID        `json:"id"`
+	IssueID    pgtype.UUID        `json:"issue_id"`
+	GithubRepo string             `json:"github_repo"`
+	PrNumber   int32              `json:"pr_number"`
+	PrUrl      string             `json:"pr_url"`
+	PrState    string             `json:"pr_state"`
+	MergedAt   pgtype.Timestamptz `json:"merged_at"`
+	ClosedAt   pgtype.Timestamptz `json:"closed_at"`
+	CreatedAt  pgtype.Timestamptz `json:"created_at"`
+	UpdatedAt  pgtype.Timestamptz `json:"updated_at"`
 }
 
 type IssueReaction struct {

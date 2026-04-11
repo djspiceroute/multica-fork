@@ -19,6 +19,7 @@ import type {
   Comment,
   Reaction,
   IssueReaction,
+  IssuePRLink,
   Workspace,
   WorkspaceRepo,
   MemberWithUser,
@@ -274,6 +275,21 @@ export class ApiClient {
   async getChildIssueProgress(): Promise<{ progress: { parent_issue_id: string; total: number; done: number }[] }> {
     return this.fetch("/api/issues/child-progress");
   }
+
+  async listIssueGitHubLinks(id: string): Promise<{ items: IssuePRLink[] }> {
+    return this.fetch(`/api/issues/${id}/github-links`);
+  }
+
+  async upsertIssueGitHubLink(
+    id: string,
+    data: { github_repo: string; pr_number: number; pr_url: string; pr_state?: "open" | "closed" | "merged" }
+  ): Promise<IssuePRLink> {
+    return this.fetch(`/api/issues/${id}/github-links`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
 
   async deleteIssue(id: string): Promise<void> {
     await this.fetch(`/api/issues/${id}`, { method: "DELETE" });
