@@ -166,9 +166,9 @@ function PropRow({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-8 items-center gap-2 rounded-md px-2 -mx-2 hover:bg-accent/50 transition-colors">
-      <span className="w-16 shrink-0 text-xs text-muted-foreground">{label}</span>
-      <div className="flex min-w-0 flex-1 items-center gap-1.5 text-xs truncate">
+    <div className="flex min-h-9 items-center gap-2 rounded-md px-2 -mx-2 hover:bg-accent/50 transition-colors">
+      <span className="w-16 shrink-0 text-[11px] uppercase tracking-wide text-muted-foreground">{label}</span>
+      <div className="flex min-w-0 flex-1 items-center gap-1.5 text-sm truncate">
         {children}
       </div>
     </div>
@@ -1184,12 +1184,12 @@ export function IssueDetail({ issueId, onDelete, defaultSidebarOpen = true, layo
             <AgentLiveCard issueId={id} />
 
             {/* Agent execution history */}
-            <div className="mt-3">
+            <div className="mt-3 rounded-lg border border-border/70 bg-card/30 p-2">
               <TaskRunHistory issueId={id} />
             </div>
 
             {/* Timeline entries */}
-            <div className="mt-4 flex flex-col gap-3">
+            <div className="mt-4 flex flex-col gap-3 rounded-lg border border-border/70 bg-card/20 p-3">
               {timelineLoading ? (
                 <div className="space-y-4">
                   {Array.from({ length: 3 }).map((_, i) => (
@@ -1319,7 +1319,7 @@ export function IssueDetail({ issueId, onDelete, defaultSidebarOpen = true, layo
             </div>
 
             {/* Bottom comment input — no avatar, full width */}
-            <div className="mt-4">
+            <div className="mt-4 rounded-lg border border-border/70 bg-card/20 p-3">
               <CommentInput issueId={id} onSubmit={submitComment} />
             </div>
           </div>
@@ -1339,10 +1339,10 @@ export function IssueDetail({ issueId, onDelete, defaultSidebarOpen = true, layo
         onResize={(size) => setSidebarOpen(size.inPixels > 0)}
       >
       {/* RIGHT: Properties sidebar */}
-      <div className="overflow-y-auto border-l h-full">
-        <div className="p-4 space-y-5">
+      <div className="overflow-y-auto border-l h-full bg-muted/10">
+        <div className="p-4 space-y-4">
           {/* Properties section */}
-          <div>
+          <div className="rounded-lg border border-border/70 bg-card/60 p-3">
             <button
               className={`flex w-full items-center gap-1 text-xs font-medium transition-colors mb-2 ${propertiesOpen ? "" : "text-muted-foreground hover:text-foreground"}`}
               onClick={() => setPropertiesOpen(!propertiesOpen)}
@@ -1400,7 +1400,7 @@ export function IssueDetail({ issueId, onDelete, defaultSidebarOpen = true, layo
 
           {/* Parent issue */}
           {parentIssue && (
-            <div>
+            <div className="rounded-lg border border-border/70 bg-card/60 p-3">
               <div className="text-xs font-medium mb-2 flex items-center gap-1">
                 <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground rotate-90" />
                 Parent issue
@@ -1419,7 +1419,7 @@ export function IssueDetail({ issueId, onDelete, defaultSidebarOpen = true, layo
           )}
 
           {/* Details section */}
-          <div>
+          <div className="rounded-lg border border-border/70 bg-card/60 p-3">
             <button
               className={`flex w-full items-center gap-1 text-xs font-medium transition-colors mb-2 ${detailsOpen ? "" : "text-muted-foreground hover:text-foreground"}`}
               onClick={() => setDetailsOpen(!detailsOpen)}
@@ -1448,7 +1448,7 @@ export function IssueDetail({ issueId, onDelete, defaultSidebarOpen = true, layo
 
           {/* Token usage */}
           {usage && usage.task_count > 0 && (
-            <div>
+            <div className="rounded-lg border border-border/70 bg-card/60 p-3">
               <div className="text-xs font-medium mb-2 flex items-center gap-1">
                 <ChevronRight className="h-3.5 w-3.5 shrink-0 text-muted-foreground rotate-90" />
                 Token usage
