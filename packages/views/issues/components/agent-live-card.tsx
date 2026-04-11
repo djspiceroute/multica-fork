@@ -109,6 +109,28 @@ interface AgentLiveCardProps {
   issueId: string;
 }
 
+const DISPATCHED_STALE_MS = 10 * 60 * 1000;
+const RUNNING_STALE_MS = 6 * 60 * 60 * 1000;
+
+function isLiveTask(task: AgentTask): boolean {
+  const now = Date.now();
+  if (task.status === "dispatched") {
+    const at = task.dispatched_at ? new Date(task.dispatched_at).getTime() : NaN;
+    if (!Number.isFinite(at)) return false;
+    return now-at < DISPATCHED_STALE_MS;
+  }
+  if (task.status === "running") {
+    const at = task.started_at
+      ? new Date(task.started_at).getTime()
+      : task.dispatched_at
+        ? new Date(task.dispatched_at).getTime()
+        : NaN;
+    if (!Number.isFinite(at)) return false;
+    return now-at < RUNNING_STALE_MS;
+  }
+  return false;
+}
+
 export function AgentLiveCard({ issueId }: AgentLiveCardProps) {
   const { getActorName } = useActorName();
   const [taskStates, setTaskStates] = useState<Map<string, TaskState>>(new Map());
@@ -118,12 +140,13 @@ export function AgentLiveCard({ issueId }: AgentLiveCardProps) {
   useEffect(() => {
     let cancelled = false;
     api.getActiveTasksForIssue(issueId).then(({ tasks }) => {
-      if (cancelled || tasks.length === 0) return;
+      const liveTasks = tasks.filter(isLiveTask);
+      if (cancelled || liveTasks.length === 0) return;
 
       // Show cards immediately with empty timeline
       setTaskStates((prev) => {
         const next = new Map(prev);
-        for (const task of tasks) {
+        for (const task of liveTasks) {
           if (!next.has(task.id)) {
             next.set(task.id, { task, items: [] });
           }
@@ -131,8 +154,8 @@ export function AgentLiveCard({ issueId }: AgentLiveCardProps) {
         return next;
       });
 
-      // Load messages per task in the background
-      for (const task of tasks) {
+      // Load messages per live task in the background
+      for (const task of liveTasks) {
         api.listTaskMessages(task.id).then((msgs) => {
           if (cancelled) return;
           const timeline = buildTimeline(msgs);
@@ -210,9 +233,10 @@ export function AgentLiveCard({ issueId }: AgentLiveCardProps) {
     "task:dispatch",
     useCallback(() => {
       api.getActiveTasksForIssue(issueId).then(({ tasks }) => {
+        const liveTasks = tasks.filter(isLiveTask);
         setTaskStates((prev) => {
           const next = new Map(prev);
-          for (const task of tasks) {
+          for (const task of liveTasks) {
             if (!next.has(task.id)) {
               next.set(task.id, { task, items: [] });
             }
