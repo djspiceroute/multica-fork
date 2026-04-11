@@ -10,6 +10,14 @@ import (
 	"time"
 )
 
+const (
+	BackendTypeClaude    = "claude-stream"
+	BackendTypeCodex     = "codex-jsonrpc"
+	BackendTypeHermesACP = "hermes-acp"
+	BackendTypeOpenCode  = "opencode-cli"
+	BackendTypeOpenClaw  = "openclaw-cli"
+)
+
 // Backend is the unified interface for executing prompts via coding agents.
 type Backend interface {
 	// Execute runs a prompt and returns a Session for streaming results.
@@ -109,6 +117,24 @@ func New(agentType string, cfg Config) (Backend, error) {
 		return &hermesBackend{cfg: cfg}, nil
 	default:
 		return nil, fmt.Errorf("unknown agent type: %q (supported: claude, codex, gemini, opencode, openclaw, hermes)", agentType)
+	}
+}
+
+// BackendTypeForProvider resolves the execution backend type used for a provider.
+func BackendTypeForProvider(provider string) (string, error) {
+	switch provider {
+	case "claude":
+		return BackendTypeClaude, nil
+	case "codex":
+		return BackendTypeCodex, nil
+	case "gemini", "hermes":
+		return BackendTypeHermesACP, nil
+	case "opencode":
+		return BackendTypeOpenCode, nil
+	case "openclaw":
+		return BackendTypeOpenClaw, nil
+	default:
+		return "", fmt.Errorf("unknown provider %q", provider)
 	}
 }
 

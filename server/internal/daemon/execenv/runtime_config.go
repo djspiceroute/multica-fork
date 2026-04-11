@@ -12,6 +12,7 @@ import (
 //
 // For Claude:   writes {workDir}/CLAUDE.md  (skills discovered natively from .claude/skills/)
 // For Codex:    writes {workDir}/AGENTS.md  (skills discovered natively via CODEX_HOME)
+// For Gemini:   writes {workDir}/AGENTS.md  (skills discovered natively from injected AGENTS.md)
 // For OpenCode: writes {workDir}/AGENTS.md  (skills discovered natively from .config/opencode/skills/)
 // For OpenClaw: writes {workDir}/AGENTS.md  (skills discovered natively from .openclaw/skills/)
 // For Gemini:   writes {workDir}/GEMINI.md  (discovered natively by the Gemini CLI)
@@ -21,7 +22,7 @@ func InjectRuntimeConfig(workDir, provider string, ctx TaskContextForEnv) error 
 	switch provider {
 	case "claude":
 		return os.WriteFile(filepath.Join(workDir, "CLAUDE.md"), []byte(content), 0o644)
-	case "codex", "opencode", "openclaw":
+	case "codex", "gemini", "opencode", "openclaw":
 		return os.WriteFile(filepath.Join(workDir, "AGENTS.md"), []byte(content), 0o644)
 	case "gemini":
 		return os.WriteFile(filepath.Join(workDir, "GEMINI.md"), []byte(content), 0o644)
