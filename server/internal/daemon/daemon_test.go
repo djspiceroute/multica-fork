@@ -2,6 +2,8 @@ package daemon
 
 import (
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -81,5 +83,45 @@ func TestIsWorkspaceNotFoundError(t *testing.T) {
 
 	if isWorkspaceNotFoundError(&requestError{StatusCode: http.StatusInternalServerError, Body: `{"error":"workspace not found"}`}) {
 		t.Fatal("did not expect 500 to be treated as workspace not found")
+	}
+}
+
+func TestPrependPathDir(t *testing.T) {
+	t.Parallel()
+
+	got := prependPathDir("/usr/bin", "/opt/homebrew/bin")
+	want := "/opt/homebrew/bin" + string(os.PathListSeparator) + "/usr/bin"
+	if got != want {
+		t.Fatalf("prependPathDir mismatch: got %q, want %q", got, want)
+	}
+
+	if got := prependPathDir("", "/opt/homebrew/bin"); got != "/opt/homebrew/bin" {
+		t.Fatalf("prependPathDir empty path mismatch: got %q", got)
+	}
+}
+
+func TestResolveNodeBinaryPathPrefersExplicitEnv(t *testing.T) {
+	t.Parallel()
+
+	tmp := t.TempDir()
+	node := filepath.Join(tmp, "node")
+	if err := os.WriteFile(node, []byte("#!/bin/sh\nexit 0\n"), 0o755); err != nil {
+		t.Fatalf("write node stub: %v", err)
+	}
+
+	orig := os.Getenv("MULTICA_NODE_PATH")
+	t.Cleanup(func() {
+		_ = os.Setenv("MULTICA_NODE_PATH", orig)
+	})
+	if err := os.Setenv("MULTICA_NODE_PATH", node); err != nil {
+		t.Fatalf("set env: %v", err)
+	}
+
+	got, ok := resolveNodeBinaryPath()
+	if !ok {
+		t.Fatal("expected resolveNodeBinaryPath to find explicit MULTICA_NODE_PATH")
+	}
+	if got != node {
+		t.Fatalf("expected %q, got %q", node, got)
 	}
 }

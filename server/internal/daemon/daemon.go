@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -1004,7 +1005,15 @@ func (d *Daemon) runTask(ctx context.Context, task Task, provider string, taskLo
 	// multica binary so that `multica` commands in the agent always resolve.
 	if selfBin, err := os.Executable(); err == nil {
 		binDir := filepath.Dir(selfBin)
-		agentEnv["PATH"] = binDir + string(os.PathListSeparator) + os.Getenv("PATH")
+		agentEnv["PATH"] = prependPathDir(os.Getenv("PATH"), binDir)
+	}
+	// Hermes (Gemini backend) requires Node at runtime. When daemon is launched
+	// from GUI contexts, PATH may miss Node even if gemini CLI is discoverable.
+	// Proactively include a resolved Node directory for Gemini/Hermes providers.
+	if provider == "gemini" || provider == "hermes" {
+		if nodePath, ok := resolveNodeBinaryPath(); ok {
+			agentEnv["PATH"] = prependPathDir(agentEnv["PATH"], filepath.Dir(nodePath))
+		}
 	}
 	// Point Codex to the per-task CODEX_HOME so it discovers skills natively
 	// without polluting the system ~/.codex/skills/.
@@ -1278,4 +1287,41 @@ func convertSkillsForEnv(skills []SkillData) []execenv.SkillContextForEnv {
 		}
 	}
 	return result
+}
+
+func prependPathDir(pathValue, dir string) string {
+	dir = strings.TrimSpace(dir)
+	if dir == "" {
+		return pathValue
+	}
+	if strings.TrimSpace(pathValue) == "" {
+		return dir
+	}
+	return dir + string(os.PathListSeparator) + pathValue
+}
+
+func resolveNodeBinaryPath() (string, bool) {
+	if explicit := strings.TrimSpace(os.Getenv("MULTICA_NODE_PATH")); explicit != "" {
+		if info, err := os.Stat(explicit); err == nil && !info.IsDir() {
+			return explicit, true
+		}
+	}
+
+	if p, err := exec.LookPath("node"); err == nil {
+		return p, true
+	}
+
+	// Common absolute install locations for local macOS/Linux setups.
+	candidates := []string{
+		"/opt/homebrew/bin/node",
+		"/usr/local/bin/node",
+		"/usr/bin/node",
+		"/bin/node",
+	}
+	for _, candidate := range candidates {
+		if info, err := os.Stat(candidate); err == nil && !info.IsDir() {
+			return candidate, true
+		}
+	}
+	return "", false
 }
