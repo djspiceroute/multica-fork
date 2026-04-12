@@ -29,6 +29,17 @@ Or start full app stack:
 make start
 ```
 
+## Quick runtime health check
+
+Use these checks after daemon start to confirm provider availability:
+
+```bash
+multica daemon status
+multica runtime list
+```
+
+Expected: local runtimes for `codex`, `claude`, and `gemini` should appear as `online`.
+
 ## Key environment variables
 
 - `MULTICA_GEMINI_PATH`:
