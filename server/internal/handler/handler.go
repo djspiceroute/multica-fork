@@ -79,19 +79,6 @@ func writeError(w http.ResponseWriter, status int, msg string) {
 }
 
 // Thin wrappers around util functions (preserve existing handler code unchanged).
-<<<<<<< HEAD
-func parseUUID(s string) pgtype.UUID                { return util.ParseUUID(s) }
-func uuidToString(u pgtype.UUID) string             { return util.UUIDToString(u) }
-func textToPtr(t pgtype.Text) *string               { return util.TextToPtr(t) }
-func ptrToText(s *string) pgtype.Text               { return util.PtrToText(s) }
-func strToText(s string) pgtype.Text                { return util.StrToText(s) }
-||||||| parent of b8f1cbc7 (feat: add github merge sync and reviewer role workflow)
-func parseUUID(s string) pgtype.UUID       { return util.ParseUUID(s) }
-func uuidToString(u pgtype.UUID) string    { return util.UUIDToString(u) }
-func textToPtr(t pgtype.Text) *string      { return util.TextToPtr(t) }
-func ptrToText(s *string) pgtype.Text      { return util.PtrToText(s) }
-func strToText(s string) pgtype.Text       { return util.StrToText(s) }
-=======
 func parseUUID(s string) pgtype.UUID    { return util.ParseUUID(s) }
 func uuidToString(u pgtype.UUID) string { return util.UUIDToString(u) }
 func textToPtr(t pgtype.Text) *string   { return util.TextToPtr(t) }
@@ -104,7 +91,6 @@ func int4ToPtr(v pgtype.Int4) *int32 {
 }
 func ptrToText(s *string) pgtype.Text               { return util.PtrToText(s) }
 func strToText(s string) pgtype.Text                { return util.StrToText(s) }
->>>>>>> b8f1cbc7 (feat: add github merge sync and reviewer role workflow)
 func timestampToString(t pgtype.Timestamptz) string { return util.TimestampToString(t) }
 func timestampToPtr(t pgtype.Timestamptz) *string   { return util.TimestampToPtr(t) }
 func uuidToPtr(u pgtype.UUID) *string               { return util.UUIDToPtr(u) }
