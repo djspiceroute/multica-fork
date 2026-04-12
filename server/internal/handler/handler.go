@@ -38,6 +38,7 @@ type Handler struct {
 	Hub          *realtime.Hub
 	Bus          *events.Bus
 	TaskService  *service.TaskService
+	GitHubSync   *service.GitHubReconcileService
 	EmailService *service.EmailService
 	PingStore    *PingStore
 	UpdateStore  *UpdateStore
@@ -58,6 +59,7 @@ func New(queries *db.Queries, txStarter txStarter, hub *realtime.Hub, bus *event
 		Hub:          hub,
 		Bus:          bus,
 		TaskService:  service.NewTaskService(queries, hub, bus),
+		GitHubSync:   service.NewGitHubReconcileService(queries),
 		EmailService: emailService,
 		PingStore:    NewPingStore(),
 		UpdateStore:  NewUpdateStore(),
