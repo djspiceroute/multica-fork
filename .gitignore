@@ -48,5 +48,10 @@ _features/
 *.dmg
 *.app
 server/server
+<<<<<<< HEAD
 data/
 .kilo
+||||||| parent of 7d2f5947 (chore: ignore local runtime binaries)
+=======
+.local-bin/
+>>>>>>> 7d2f5947 (chore: ignore local runtime binaries)
