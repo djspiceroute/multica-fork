@@ -10,6 +10,7 @@ func TestIsTrustedCLISyncRequest_NoSecret(t *testing.T) {
 	t.Setenv("MULTICA_CLI_SYNC_SECRET", "")
 	req := httptest.NewRequest("PATCH", "/api/issues/x", nil)
 	req.Header.Set(cliSyncHeader, "1")
+	req.RemoteAddr = "127.0.0.1:12345"
 
 	if !isTrustedCLISyncRequest(req) {
 		t.Fatal("expected trusted CLI sync request when header is set and no secret configured")
@@ -22,6 +23,7 @@ func TestIsTrustedCLISyncRequest_WithSecret(t *testing.T) {
 	req := httptest.NewRequest("PATCH", "/api/issues/x", nil)
 	req.Header.Set(cliSyncHeader, "1")
 	req.Header.Set(cliSyncSecretHeader, "wrong")
+	req.RemoteAddr = "127.0.0.1:12345"
 	if isTrustedCLISyncRequest(req) {
 		t.Fatal("expected untrusted request when secret header is wrong")
 	}
@@ -29,6 +31,7 @@ func TestIsTrustedCLISyncRequest_WithSecret(t *testing.T) {
 	req2 := httptest.NewRequest("PATCH", "/api/issues/x", nil)
 	req2.Header.Set(cliSyncHeader, "1")
 	req2.Header.Set(cliSyncSecretHeader, "test-secret")
+	req2.RemoteAddr = "127.0.0.1:12345"
 	if !isTrustedCLISyncRequest(req2) {
 		t.Fatal("expected trusted request when secret header matches")
 	}
@@ -37,7 +40,18 @@ func TestIsTrustedCLISyncRequest_WithSecret(t *testing.T) {
 func TestIsTrustedCLISyncRequest_MissingHeader(t *testing.T) {
 	_ = os.Unsetenv("MULTICA_CLI_SYNC_SECRET")
 	req := httptest.NewRequest("PATCH", "/api/issues/x", nil)
+	req.RemoteAddr = "127.0.0.1:12345"
 	if isTrustedCLISyncRequest(req) {
 		t.Fatal("expected untrusted request when CLI sync header is missing")
+	}
+}
+
+func TestIsTrustedCLISyncRequest_RejectsNonLoopback(t *testing.T) {
+	t.Setenv("MULTICA_CLI_SYNC_SECRET", "")
+	req := httptest.NewRequest("PATCH", "/api/issues/x", nil)
+	req.Header.Set(cliSyncHeader, "1")
+	req.RemoteAddr = "10.10.10.10:12345"
+	if isTrustedCLISyncRequest(req) {
+		t.Fatal("expected untrusted request for non-loopback remote address")
 	}
 }

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net"
 	"net/http"
 	"os"
 	"regexp"
@@ -1164,7 +1165,7 @@ func (h *Handler) UpdateIssue(w http.ResponseWriter, r *http.Request) {
 		"creator_id":          uuidToString(prevIssue.CreatorID),
 	})
 	if statusChanged && issue.Status == "done" {
-		go h.closeLinkedGitHubIssueBestEffort(issue)
+		go h.GitHubSync.CloseLinkedGitHubIssueBestEffort(issue)
 	}
 
 	// Reconcile task queue when assignee changes (not on status changes —
@@ -1457,7 +1458,7 @@ func (h *Handler) BatchUpdateIssues(w http.ResponseWriter, r *http.Request) {
 			"priority_changed": priorityChanged,
 		})
 		if statusChanged && issue.Status == "done" {
-			go h.closeLinkedGitHubIssueBestEffort(issue)
+			go h.GitHubSync.CloseLinkedGitHubIssueBestEffort(issue)
 		}
 
 		if assigneeChanged {
@@ -1523,6 +1524,20 @@ func (h *Handler) resolveIssueStatusByDependencies(ctx context.Context, issue db
 }
 
 func (h *Handler) canTransitionIssueToDone(ctx context.Context, r *http.Request, issue db.Issue, actorType string) (bool, string, error) {
+	needsPRPolicy, err := h.requiresGitHubDonePolicy(ctx, issue)
+	if err != nil {
+		return false, "", err
+	}
+	if !needsPRPolicy {
+		return true, "", nil
+	}
+
+	if actorType == "member" && isTrustedCLISyncRequest(r) {
+		// Trusted local CLI sync can complete linked issues even if link rows
+		// are not yet updated (eventual consistency between merge and sync write).
+		return true, "", nil
+	}
+
 	hasMergedPR, err := h.hasMergedPRLink(ctx, issue.ID)
 	if err != nil {
 		return false, "", err
@@ -1538,35 +1553,53 @@ func (h *Handler) canTransitionIssueToDone(ctx context.Context, r *http.Request,
 		}
 	}
 
-	if actorType == "member" && isTrustedCLISyncRequest(r) {
-		return true, "", nil
-	}
-
 	return false, "only reviewer-assigned issues or trusted CLI sync can move to done", nil
 }
 
 func (h *Handler) hasMergedPRLink(ctx context.Context, issueID pgtype.UUID) (bool, error) {
-	links, err := h.Queries.ListIssuePRLinks(ctx, issueID)
+	hasMerged, err := h.GitHubSync.IssueHasMergedPR(ctx, issueID)
 	if err != nil {
 		return false, err
 	}
-	for _, link := range links {
-		if strings.EqualFold(link.PrState, "merged") {
-			return true, nil
-		}
+	return hasMerged, nil
+}
+
+func (h *Handler) requiresGitHubDonePolicy(ctx context.Context, issue db.Issue) (bool, error) {
+	if issue.GithubRepo.Valid || issue.GithubIssueNumber.Valid || issue.GithubPrNumber.Valid {
+		return true, nil
 	}
-	return false, nil
+	links, err := h.Queries.ListIssuePRLinks(ctx, issue.ID)
+	if err != nil {
+		return false, err
+	}
+	return len(links) > 0, nil
 }
 
 func isTrustedCLISyncRequest(r *http.Request) bool {
 	if strings.TrimSpace(r.Header.Get(cliSyncHeader)) != "1" {
 		return false
 	}
+	if !isLoopbackRequest(r) {
+		return false
+	}
 	expected := strings.TrimSpace(os.Getenv("MULTICA_CLI_SYNC_SECRET"))
 	if expected == "" {
+		// Local-only trusted mode: explicit header + loopback transport.
 		return true
 	}
 	return strings.TrimSpace(r.Header.Get(cliSyncSecretHeader)) == expected
+}
+
+func isLoopbackRequest(r *http.Request) bool {
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		host = r.RemoteAddr
+	}
+	ip := net.ParseIP(strings.TrimSpace(host))
+	if ip == nil {
+		return strings.EqualFold(strings.TrimSpace(host), "localhost")
+	}
+	return ip.IsLoopback()
 }
 
 type BatchDeleteIssuesRequest struct {

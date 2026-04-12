@@ -1,12 +1,10 @@
 package handler
 
 import (
-	"bytes"
 	"crypto/hmac"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -15,6 +13,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/multica-ai/multica/server/internal/service"
 	db "github.com/multica-ai/multica/server/pkg/db/generated"
 	"github.com/multica-ai/multica/server/pkg/protocol"
 )
@@ -54,16 +53,6 @@ type UpsertIssuePRLinkRequest struct {
 	PrState    string `json:"pr_state,omitempty"`
 }
 
-func normalizeGitHubRepo(repo string) string {
-	s := strings.TrimSpace(repo)
-	s = strings.TrimPrefix(s, "https://github.com/")
-	s = strings.TrimPrefix(s, "http://github.com/")
-	s = strings.TrimPrefix(s, "github.com/")
-	s = strings.TrimPrefix(s, "git@github.com:")
-	s = strings.TrimSuffix(s, ".git")
-	return strings.Trim(s, "/")
-}
-
 func (h *Handler) ListIssuePRLinks(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	issue, ok := h.loadIssueForUser(w, r, id)
@@ -93,7 +82,7 @@ func (h *Handler) UpsertIssuePRLink(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	repo := normalizeGitHubRepo(req.GithubRepo)
+	repo := service.NormalizeGitHubRepo(req.GithubRepo)
 	if repo == "" || req.PrNumber <= 0 || strings.TrimSpace(req.PrURL) == "" {
 		writeError(w, http.StatusBadRequest, "github_repo, pr_number, pr_url are required")
 		return
@@ -106,47 +95,16 @@ func (h *Handler) UpsertIssuePRLink(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "pr_state must be open, closed, or merged")
 		return
 	}
-	now := pgtype.Timestamptz{Time: time.Now().UTC(), Valid: true}
-	row, err := h.Queries.UpsertIssuePRLink(r.Context(), db.UpsertIssuePRLinkParams{
-		IssueID:    issue.ID,
-		GithubRepo: repo,
-		PrNumber:   req.PrNumber,
-		PrUrl:      strings.TrimSpace(req.PrURL),
-		PrState:    state,
-		MergedAt: func() pgtype.Timestamptz {
-			if state == "merged" {
-				return now
-			}
-			return pgtype.Timestamptz{}
-		}(),
-		ClosedAt: func() pgtype.Timestamptz {
-			if state == "closed" || state == "merged" {
-				return now
-			}
-			return pgtype.Timestamptz{}
-		}(),
-	})
+	row, updatedIssue, err := h.GitHubSync.UpsertIssuePRLinkAndSyncIssue(r.Context(), issue, repo, req.PrNumber, req.PrURL, state)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, "failed to save PR link")
 		return
 	}
 
-	// Keep issue-level GitHub metadata in sync for downstream automations.
-	updatedIssue, err := h.Queries.UpdateIssue(r.Context(), db.UpdateIssueParams{
-		ID:                issue.ID,
-		AssigneeType:      issue.AssigneeType,
-		AssigneeID:        issue.AssigneeID,
-		DueDate:           issue.DueDate,
-		ParentIssueID:     issue.ParentIssueID,
-		ProjectID:         issue.ProjectID,
-		GithubRepo:        pgtype.Text{String: repo, Valid: true},
-		GithubPrNumber:    pgtype.Int4{Int32: req.PrNumber, Valid: true},
-		GithubIssueNumber: issue.GithubIssueNumber,
-	})
-	if err == nil {
+	if updatedIssue != nil {
 		prefix := h.getIssuePrefix(r.Context(), updatedIssue.WorkspaceID)
 		h.publish(protocol.EventIssueUpdated, uuidToString(updatedIssue.WorkspaceID), "system", "", map[string]any{
-			"issue": issueToResponse(updatedIssue, prefix),
+			"issue": issueToResponse(*updatedIssue, prefix),
 		})
 	}
 
@@ -212,7 +170,7 @@ func (h *Handler) HandleGitHubWebhook(w http.ResponseWriter, r *http.Request) {
 		writeJSON(w, http.StatusOK, map[string]any{"ignored": true, "reason": "action_not_closed"})
 		return
 	}
-	repo := normalizeGitHubRepo(payload.Repository.FullName)
+	repo := service.NormalizeGitHubRepo(payload.Repository.FullName)
 	prNumber := payload.PullRequest.Number
 	if prNumber == 0 {
 		prNumber = payload.Number
@@ -235,24 +193,27 @@ func (h *Handler) HandleGitHubWebhook(w http.ResponseWriter, r *http.Request) {
 			mergedAt = pgtype.Timestamptz{Time: t.UTC(), Valid: true}
 		}
 	}
-	_, _ = h.Queries.UpsertIssuePRLink(r.Context(), db.UpsertIssuePRLinkParams{
-		IssueID:    link.IssueID,
-		GithubRepo: repo,
-		PrNumber:   prNumber,
-		PrUrl:      payload.PullRequest.HTMLURL,
-		PrState: func() string {
-			if payload.PullRequest.Merged {
-				return "merged"
-			}
-			return "closed"
-		}(),
-		MergedAt: mergedAt,
-		ClosedAt: closedAt,
-	})
+	state := "closed"
+	if payload.PullRequest.Merged {
+		state = "merged"
+	}
+	issue, issueErr := h.Queries.GetIssue(r.Context(), link.IssueID)
+	if issueErr == nil {
+		_, _, _ = h.GitHubSync.UpsertIssuePRLinkAndSyncIssue(r.Context(), issue, repo, prNumber, payload.PullRequest.HTMLURL, state)
+	} else {
+		_, _ = h.Queries.UpsertIssuePRLink(r.Context(), db.UpsertIssuePRLinkParams{
+			IssueID:    link.IssueID,
+			GithubRepo: repo,
+			PrNumber:   prNumber,
+			PrUrl:      payload.PullRequest.HTMLURL,
+			PrState:    state,
+			MergedAt:   mergedAt,
+			ClosedAt:   closedAt,
+		})
+	}
 
 	if payload.PullRequest.Merged {
-		issue, err := h.Queries.GetIssue(r.Context(), link.IssueID)
-		if err == nil {
+		if issueErr == nil {
 			targetStatus, resolveErr := h.resolveIssueStatusByDependencies(r.Context(), issue, "done")
 			if resolveErr == nil {
 				updated, updateErr := h.Queries.UpdateIssue(r.Context(), db.UpdateIssueParams{
@@ -272,33 +233,11 @@ func (h *Handler) HandleGitHubWebhook(w http.ResponseWriter, r *http.Request) {
 					h.publish(protocol.EventIssueUpdated, uuidToString(updated.WorkspaceID), "system", "", map[string]any{
 						"issue": issueToResponse(updated, prefix),
 					})
-					h.closeLinkedGitHubIssueBestEffort(updated)
+					h.GitHubSync.CloseLinkedGitHubIssueBestEffort(updated)
 				}
 			}
 		}
 	}
 
 	writeJSON(w, http.StatusOK, map[string]any{"ok": true})
-}
-
-func (h *Handler) closeLinkedGitHubIssueBestEffort(issue db.Issue) {
-	token := strings.TrimSpace(os.Getenv("GITHUB_TOKEN"))
-	if token == "" || !issue.GithubRepo.Valid || !issue.GithubIssueNumber.Valid {
-		return
-	}
-	url := fmt.Sprintf("https://api.github.com/repos/%s/issues/%d", normalizeGitHubRepo(issue.GithubRepo.String), issue.GithubIssueNumber.Int32)
-	body := []byte(`{"state":"closed"}`)
-	req, err := http.NewRequest(http.MethodPatch, url, bytes.NewReader(body))
-	if err != nil {
-		return
-	}
-	req.Header.Set("Authorization", "Bearer "+token)
-	req.Header.Set("Accept", "application/vnd.github+json")
-	req.Header.Set("Content-Type", "application/json")
-	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Do(req)
-	if err != nil {
-		return
-	}
-	defer resp.Body.Close()
 }
