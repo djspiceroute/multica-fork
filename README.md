@@ -147,6 +147,15 @@ See the [CLI and Daemon Guide](CLI_AND_DAEMON.md) for the full command reference
 
 For contributors working on the Multica codebase, see the [Contributing Guide](CONTRIBUTING.md).
 
+### Fork Notes
+
+If you are working on this fork (`djspiceroute/multica-fork`), see [MAINTAINERS.md](MAINTAINERS.md) for fork-specific behavior:
+
+- Gemini runtime parity and Node path handling
+- Reviewer-gated done transition policy
+- CLI-first GitHub sync behavior
+- Provider readiness diagnostics
+
 **Prerequisites:** [Node.js](https://nodejs.org/) v20+, [pnpm](https://pnpm.io/) v10.28+, [Go](https://go.dev/) v1.26+, [Docker](https://www.docker.com/)
 
 ```bash
