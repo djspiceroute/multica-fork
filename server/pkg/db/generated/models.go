@@ -37,6 +37,7 @@ type Agent struct {
 	Instructions       string             `json:"instructions"`
 	ArchivedAt         pgtype.Timestamptz `json:"archived_at"`
 	ArchivedBy         pgtype.UUID        `json:"archived_by"`
+	CustomEnv          []byte             `json:"custom_env"`
 	Role               string             `json:"role"`
 }
 
@@ -116,6 +117,7 @@ type ChatSession struct {
 	Status      string             `json:"status"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
+	UnreadSince pgtype.Timestamptz `json:"unread_since"`
 }
 
 type Comment struct {
