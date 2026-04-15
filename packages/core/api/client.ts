@@ -197,6 +197,31 @@ export class ApiClient {
     });
   }
 
+  async githubLogin(code: string, redirectUri: string): Promise<LoginResponse> {
+    return this.fetch("/auth/github", {
+      method: "POST",
+      body: JSON.stringify({ code, redirect_uri: redirectUri }),
+    });
+  }
+
+  async listLinkedAccounts(): Promise<{ provider: string; email: string }[]> {
+    return this.fetch("/api/me/linked-accounts");
+  }
+
+  async connectGitHub(code: string, redirectUri: string): Promise<{ message: string }> {
+    return this.fetch("/api/me/connect/github", {
+      method: "POST",
+      body: JSON.stringify({ code, redirect_uri: redirectUri }),
+    });
+  }
+
+  async disconnectOAuth(provider: string): Promise<{ message: string }> {
+    return this.fetch("/api/me/linked-accounts", {
+      method: "DELETE",
+      body: JSON.stringify({ provider }),
+    });
+  }
+
   async logout(): Promise<void> {
     await this.fetch("/auth/logout", { method: "POST" });
   }

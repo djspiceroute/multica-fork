@@ -22,6 +22,7 @@ function CallbackContent() {
   const searchParams = useSearchParams();
   const qc = useQueryClient();
   const loginWithGoogle = useAuthStore((s) => s.loginWithGoogle);
+  const loginWithGitHub = useAuthStore((s) => s.loginWithGitHub);
   const hydrateWorkspace = useWorkspaceStore((s) => s.hydrateWorkspace);
   const [error, setError] = useState("");
   const [desktopToken, setDesktopToken] = useState<string | null>(null);
@@ -41,13 +42,17 @@ function CallbackContent() {
 
     const state = searchParams.get("state");
     const isDesktop = state === "platform:desktop";
+    const provider = searchParams.get("provider") ?? "google";
 
     const redirectUri = `${window.location.origin}/auth/callback`;
 
+    const doLogin = provider === "github"
+      ? loginWithGitHub(code, redirectUri)
+      : loginWithGoogle(code, redirectUri);
+
     if (isDesktop) {
       // Desktop flow: exchange code for token, then redirect via deep link
-      api
-        .googleLogin(code, redirectUri)
+      (provider === "github" ? api.githubLogin(code, redirectUri) : api.googleLogin(code, redirectUri))
         .then(({ token }) => {
           setDesktopToken(token);
           window.location.href = `multica://auth/callback?token=${encodeURIComponent(token)}`;
@@ -57,7 +62,7 @@ function CallbackContent() {
         });
     } else {
       // Normal web flow
-      loginWithGoogle(code, redirectUri)
+      doLogin
         .then(async () => {
           const wsList = await api.listWorkspaces();
           qc.setQueryData(workspaceKeys.list(), wsList);
@@ -69,7 +74,7 @@ function CallbackContent() {
           setError(err instanceof Error ? err.message : "Login failed");
         });
     }
-  }, [searchParams, loginWithGoogle, hydrateWorkspace, router, qc]);
+  }, [searchParams, loginWithGoogle, loginWithGitHub, hydrateWorkspace, router, qc]);
 
   if (desktopToken) {
     return (

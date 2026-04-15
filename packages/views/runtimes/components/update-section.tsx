@@ -93,7 +93,7 @@ export function UpdateSection({
   isOnline,
   launchedBy,
 }: UpdateSectionProps) {
-  const isManaged = launchedBy === "desktop";
+  const isManaged = launchedBy === "desktop" || currentVersion === "dev";
   const [latestVersion, setLatestVersion] = useState<string | null>(null);
   const [status, setStatus] = useState<RuntimeUpdateStatus | null>(null);
   const [error, setError] = useState("");
@@ -177,9 +177,9 @@ export function UpdateSection({
         {isManaged ? (
           <span
             className="inline-flex items-center gap-1 text-xs text-muted-foreground"
-            title="The CLI binary is managed by Multica Desktop — update Desktop to upgrade the CLI."
+            title={launchedBy === "desktop" ? "The CLI binary is managed by Multica Desktop — update Desktop to upgrade the CLI." : "Running a local dev build — update via git rebase."}
           >
-            Managed by Desktop
+            {launchedBy === "desktop" ? "Managed by Desktop" : "Dev build"}
           </span>
         ) : (
           <>
