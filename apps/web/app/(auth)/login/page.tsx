@@ -11,6 +11,7 @@ import { setLoggedInCookie } from "@/features/auth/auth-cookie";
 import { LoginPage, validateCliCallback } from "@multica/views/auth";
 
 const googleClientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+const githubClientId = process.env.NEXT_PUBLIC_GITHUB_CLIENT_ID;
 
 function LoginPageContent() {
   const router = useRouter();
@@ -80,6 +81,7 @@ function LoginPageContent() {
             }
           : undefined
       }
+      github={githubClientId ? { clientId: githubClientId } : undefined}
       cliCallback={
         cliCallbackRaw && validateCliCallback(cliCallbackRaw)
           ? { url: cliCallbackRaw, state: cliState }

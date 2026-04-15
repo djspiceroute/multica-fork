@@ -22,6 +22,7 @@ function CallbackContent() {
   const searchParams = useSearchParams();
   const qc = useQueryClient();
   const loginWithGoogle = useAuthStore((s) => s.loginWithGoogle);
+  const loginWithGitHub = useAuthStore((s) => s.loginWithGitHub);
   const [error, setError] = useState("");
   const [desktopToken, setDesktopToken] = useState<string | null>(null);
 
@@ -45,13 +46,17 @@ function CallbackContent() {
     // Strip "next:" prefix, then drop anything that isn't a safe relative path
     // so an attacker-controlled `state=next:https://evil` cannot redirect here.
     const nextUrl = sanitizeNextUrl(nextPart ? nextPart.slice(5) : null);
+    const provider = searchParams.get("provider") ?? "google";
 
     const redirectUri = `${window.location.origin}/auth/callback`;
 
+    const doLogin = provider === "github"
+      ? loginWithGitHub(code, redirectUri)
+      : loginWithGoogle(code, redirectUri);
+
     if (isDesktop) {
       // Desktop flow: exchange code for token, then redirect via deep link
-      api
-        .googleLogin(code, redirectUri)
+      (provider === "github" ? api.githubLogin(code, redirectUri) : api.googleLogin(code, redirectUri))
         .then(({ token }) => {
           setDesktopToken(token);
           window.location.href = `multica://auth/callback?token=${encodeURIComponent(token)}`;
@@ -61,7 +66,7 @@ function CallbackContent() {
         });
     } else {
       // Normal web flow
-      loginWithGoogle(code, redirectUri)
+      doLogin
         .then(async () => {
           const wsList = await api.listWorkspaces();
           qc.setQueryData(workspaceKeys.list(), wsList);
@@ -79,7 +84,7 @@ function CallbackContent() {
           setError(err instanceof Error ? err.message : "Login failed");
         });
     }
-  }, [searchParams, loginWithGoogle, router, qc]);
+  }, [searchParams, loginWithGoogle, loginWithGitHub, router, qc]);
 
   if (desktopToken) {
     return (

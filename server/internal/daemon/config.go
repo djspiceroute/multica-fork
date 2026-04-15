@@ -121,13 +121,6 @@ func LoadConfig(overrides Overrides) (Config, error) {
 			Model: strings.TrimSpace(os.Getenv("MULTICA_HERMES_MODEL")),
 		}
 	}
-	geminiPath := envOrDefault("MULTICA_GEMINI_PATH", "gemini")
-	if _, err := exec.LookPath(geminiPath); err == nil {
-		agents["gemini"] = AgentEntry{
-			Path:  geminiPath,
-			Model: strings.TrimSpace(os.Getenv("MULTICA_GEMINI_MODEL")),
-		}
-	}
 	if len(agents) == 0 {
 		return Config{}, fmt.Errorf("no agent CLI found: install claude, codex, gemini, opencode, openclaw, or hermes and ensure it is on PATH")
 	}
