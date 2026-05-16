@@ -68,6 +68,21 @@ export interface SearchProjectsResponse {
   total: number;
 }
 
+export interface SyncGitHubIssuesRequest {
+  github_repo: string;
+  state?: "open" | "all";
+}
+
+export interface SyncGitHubIssuesResponse {
+  ok: boolean;
+  repo: string;
+  state: "open" | "all";
+  fetched: number;
+  created: number;
+  updated: number;
+  skipped: number;
+}
+
 export interface UpdateMeRequest {
   name?: string;
   avatar_url?: string;

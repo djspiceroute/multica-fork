@@ -9,10 +9,9 @@ import (
 // MinVersions defines the minimum required CLI version for each agent type.
 // Versions below these will be rejected during daemon registration.
 var MinVersions = map[string]string{
-	"claude": "2.0.0",
-	"codex":  "0.100.0", // app-server --listen stdio:// added in 0.100.0
-	"gemini": "0.37.0",  // gemini ACP CLI baseline used by local daemon integration
-	"hermes": "0.1.0",   // Hermes ACP CLI baseline
+	"claude":  "2.0.0",
+	"codex":   "0.100.0", // app-server --listen stdio:// added in 0.100.0
+	"copilot": "1.0.0",   // --output-format json envelope stable from 1.0.x
 }
 
 // semver holds a parsed semantic version (major.minor.patch).

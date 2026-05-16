@@ -60,22 +60,10 @@ func (s *GitHubReconcileService) UpsertIssuePRLinkAndSyncIssue(ctx context.Conte
 		return db.IssuePrLink{}, nil, err
 	}
 
-	updatedIssue, err := s.Queries.UpdateIssue(ctx, db.UpdateIssueParams{
-		ID:                issue.ID,
-		AssigneeType:      issue.AssigneeType,
-		AssigneeID:        issue.AssigneeID,
-		DueDate:           issue.DueDate,
-		ParentIssueID:     issue.ParentIssueID,
-		ProjectID:         issue.ProjectID,
-		GithubRepo:        pgtype.Text{String: repo, Valid: true},
-		GithubPrNumber:    pgtype.Int4{Int32: prNumber, Valid: true},
-		GithubIssueNumber: issue.GithubIssueNumber,
-	})
-	if err != nil {
-		return row, nil, nil
-	}
-
-	return row, &updatedIssue, nil
+	// The canonical GitHub linkage is the issue_pr_link table. The current
+	// issue update query no longer carries GitHub link columns directly, so
+	// return the upserted link and let callers refresh issue state as needed.
+	return row, nil, nil
 }
 
 func (s *GitHubReconcileService) IssueHasMergedPR(ctx context.Context, issueID pgtype.UUID) (bool, error) {

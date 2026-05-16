@@ -1,0 +1,31 @@
+diff --git a/lib/html-encoding-sniffer.js b/lib/html-encoding-sniffer.js
+index 08a92d3746ffb7da66451e407f00884df6828f99..48041b6076391a63902759665bad68ae239a8e29 100644
+--- a/lib/html-encoding-sniffer.js
++++ b/lib/html-encoding-sniffer.js
+@@ -1,8 +1,10 @@
+ "use strict";
+-const { getBOMEncoding, labelToName } = require("@exodus/bytes/encoding-lite.js");
+ 
+ // https://html.spec.whatwg.org/#encoding-sniffing-algorithm
+-module.exports = (uint8Array, { xml = false, transportLayerEncodingLabel, defaultEncoding } = {}) => {
++module.exports = (async () => {
++  const { getBOMEncoding, labelToName } = await import("@exodus/bytes/encoding-lite.js");
++
++  return (uint8Array, { xml = false, transportLayerEncodingLabel, defaultEncoding } = {}) => {
+   if (defaultEncoding === undefined) {
+     defaultEncoding = xml ? "UTF-8" : "windows-1252";
+   }
+@@ -22,10 +24,10 @@ module.exports = (uint8Array, { xml = false, transportLayerEncodingLabel, defaul
+   }
+ 
+   return encoding;
+-};
++  };
+ 
+-// https://html.spec.whatwg.org/multipage/syntax.html#prescan-a-byte-stream-to-determine-its-encoding
+-function prescanMetaCharset(uint8Array) {
++  // https://html.spec.whatwg.org/multipage/syntax.html#prescan-a-byte-stream-to-determine-its-encoding
++  function prescanMetaCharset(uint8Array) {
+   const l = Math.min(uint8Array.byteLength, 1024);
+   for (let i = 0; i < l; i++) {
+     let c = uint8Array[i];

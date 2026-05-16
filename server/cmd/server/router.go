@@ -124,7 +124,6 @@ func NewRouter(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus) chi.Route
 	r.Post("/auth/send-code", h.SendCode)
 	r.Post("/auth/verify-code", h.VerifyCode)
 	r.Post("/auth/google", h.GoogleLogin)
-	r.Post("/auth/github", h.GitHubLogin)
 	r.Post("/auth/logout", h.Logout)
 	r.Post("/webhooks/github", h.HandleGitHubWebhook)
 
@@ -164,9 +163,6 @@ func NewRouter(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus) chi.Route
 		r.Get("/api/me", h.GetMe)
 		r.Patch("/api/me", h.UpdateMe)
 		r.Post("/api/cli-token", h.IssueCliToken)
-		r.Get("/api/me/linked-accounts", h.ListLinkedAccounts)
-		r.Post("/api/me/connect/github", h.ConnectGitHub)
-		r.Delete("/api/me/linked-accounts", h.DisconnectOAuth)
 		r.Post("/api/upload-file", h.UploadFile)
 
 		r.Route("/api/workspaces", func(r chi.Router) {
@@ -216,6 +212,7 @@ func NewRouter(pool *pgxpool.Pool, hub *realtime.Hub, bus *events.Bus) chi.Route
 
 			// Assignee frequency
 			r.Get("/api/assignee-frequency", h.GetAssigneeFrequency)
+			r.Post("/api/github/sync/issues", h.SyncGitHubIssues)
 
 			// Issues
 			r.Route("/api/issues", func(r chi.Router) {

@@ -455,33 +455,6 @@ func TestInjectRuntimeConfigCodex(t *testing.T) {
 	}
 }
 
-func TestInjectRuntimeConfigGemini(t *testing.T) {
-	t.Parallel()
-	dir := t.TempDir()
-
-	ctx := TaskContextForEnv{
-		IssueID:     "test-issue-id",
-		AgentSkills: []SkillContextForEnv{{Name: "Review", Content: "Review code carefully."}},
-	}
-
-	if err := InjectRuntimeConfig(dir, "gemini", ctx); err != nil {
-		t.Fatalf("InjectRuntimeConfig failed: %v", err)
-	}
-
-	content, err := os.ReadFile(filepath.Join(dir, "AGENTS.md"))
-	if err != nil {
-		t.Fatalf("failed to read AGENTS.md: %v", err)
-	}
-
-	s := string(content)
-	if !strings.Contains(s, "Multica Agent Runtime") {
-		t.Error("AGENTS.md missing meta skill header")
-	}
-	if !strings.Contains(s, "Review") {
-		t.Error("AGENTS.md missing skill name")
-	}
-}
-
 func TestInjectRuntimeConfigNoSkills(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()

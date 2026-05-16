@@ -32,18 +32,18 @@ type dbExecutor interface {
 }
 
 type Handler struct {
-	Queries      *db.Queries
-	DB           dbExecutor
-	TxStarter    txStarter
-	Hub          *realtime.Hub
-	Bus          *events.Bus
-	TaskService  *service.TaskService
-	GitHubSync   *service.GitHubReconcileService
-	EmailService *service.EmailService
-	PingStore    *PingStore
-	UpdateStore  *UpdateStore
-	Storage      storage.Storage
-	CFSigner     *auth.CloudFrontSigner
+	Queries          *db.Queries
+	DB               dbExecutor
+	TxStarter        txStarter
+	Hub              *realtime.Hub
+	Bus              *events.Bus
+	TaskService      *service.TaskService
+	AutopilotService *service.AutopilotService
+	EmailService     *service.EmailService
+	PingStore        *PingStore
+	UpdateStore      *UpdateStore
+	Storage          storage.Storage
+	CFSigner         *auth.CloudFrontSigner
 }
 
 func New(queries *db.Queries, txStarter txStarter, hub *realtime.Hub, bus *events.Bus, emailService *service.EmailService, store storage.Storage, cfSigner *auth.CloudFrontSigner) *Handler {
@@ -52,19 +52,20 @@ func New(queries *db.Queries, txStarter txStarter, hub *realtime.Hub, bus *event
 		executor = candidate
 	}
 
+	taskSvc := service.NewTaskService(queries, hub, bus)
 	return &Handler{
-		Queries:      queries,
-		DB:           executor,
-		TxStarter:    txStarter,
-		Hub:          hub,
-		Bus:          bus,
-		TaskService:  service.NewTaskService(queries, hub, bus),
-		GitHubSync:   service.NewGitHubReconcileService(queries),
-		EmailService: emailService,
-		PingStore:    NewPingStore(),
-		UpdateStore:  NewUpdateStore(),
-		Storage:      store,
-		CFSigner:     cfSigner,
+		Queries:          queries,
+		DB:               executor,
+		TxStarter:        txStarter,
+		Hub:              hub,
+		Bus:              bus,
+		TaskService:      taskSvc,
+		AutopilotService: service.NewAutopilotService(queries, txStarter, bus, taskSvc),
+		EmailService:     emailService,
+		PingStore:        NewPingStore(),
+		UpdateStore:      NewUpdateStore(),
+		Storage:          store,
+		CFSigner:         cfSigner,
 	}
 }
 
@@ -79,32 +80,11 @@ func writeError(w http.ResponseWriter, status int, msg string) {
 }
 
 // Thin wrappers around util functions (preserve existing handler code unchanged).
-<<<<<<< HEAD
 func parseUUID(s string) pgtype.UUID                { return util.ParseUUID(s) }
 func uuidToString(u pgtype.UUID) string             { return util.UUIDToString(u) }
 func textToPtr(t pgtype.Text) *string               { return util.TextToPtr(t) }
 func ptrToText(s *string) pgtype.Text               { return util.PtrToText(s) }
 func strToText(s string) pgtype.Text                { return util.StrToText(s) }
-||||||| parent of b8f1cbc7 (feat: add github merge sync and reviewer role workflow)
-func parseUUID(s string) pgtype.UUID       { return util.ParseUUID(s) }
-func uuidToString(u pgtype.UUID) string    { return util.UUIDToString(u) }
-func textToPtr(t pgtype.Text) *string      { return util.TextToPtr(t) }
-func ptrToText(s *string) pgtype.Text      { return util.PtrToText(s) }
-func strToText(s string) pgtype.Text       { return util.StrToText(s) }
-=======
-func parseUUID(s string) pgtype.UUID    { return util.ParseUUID(s) }
-func uuidToString(u pgtype.UUID) string { return util.UUIDToString(u) }
-func textToPtr(t pgtype.Text) *string   { return util.TextToPtr(t) }
-func int4ToPtr(v pgtype.Int4) *int32 {
-	if !v.Valid {
-		return nil
-	}
-	out := v.Int32
-	return &out
-}
-func ptrToText(s *string) pgtype.Text               { return util.PtrToText(s) }
-func strToText(s string) pgtype.Text                { return util.StrToText(s) }
->>>>>>> b8f1cbc7 (feat: add github merge sync and reviewer role workflow)
 func timestampToString(t pgtype.Timestamptz) string { return util.TimestampToString(t) }
 func timestampToPtr(t pgtype.Timestamptz) *string   { return util.TimestampToPtr(t) }
 func uuidToPtr(u pgtype.UUID) *string               { return util.UUIDToPtr(u) }
@@ -172,16 +152,15 @@ func requireUserID(w http.ResponseWriter, r *http.Request) (string, bool) {
 	return userID, true
 }
 
-func resolveWorkspaceID(r *http.Request) string {
-	// Prefer context value set by workspace middleware.
-	if id := middleware.WorkspaceIDFromContext(r.Context()); id != "" {
-		return id
-	}
-	workspaceID := r.URL.Query().Get("workspace_id")
-	if workspaceID != "" {
-		return workspaceID
-	}
-	return r.Header.Get("X-Workspace-ID")
+// resolveWorkspaceID returns the workspace UUID for this request. Delegates
+// to middleware.ResolveWorkspaceIDFromRequest so middleware-protected routes
+// and middleware-less routes (e.g. /api/upload-file) share identical
+// resolution behavior — including slug → UUID translation via the DB.
+//
+// Returns "" when no workspace identifier was provided or a slug was provided
+// but doesn't match any workspace.
+func (h *Handler) resolveWorkspaceID(r *http.Request) string {
+	return middleware.ResolveWorkspaceIDFromRequest(r, h.Queries)
 }
 
 // ctxMember returns the workspace member from context (set by workspace middleware).
@@ -292,7 +271,7 @@ func (h *Handler) loadIssueForUser(w http.ResponseWriter, r *http.Request, issue
 		return db.Issue{}, false
 	}
 
-	workspaceID := resolveWorkspaceID(r)
+	workspaceID := h.resolveWorkspaceID(r)
 	if workspaceID == "" {
 		writeError(w, http.StatusBadRequest, "workspace_id is required")
 		return db.Issue{}, false
@@ -382,7 +361,7 @@ func (h *Handler) loadAgentForUser(w http.ResponseWriter, r *http.Request, agent
 		return db.Agent{}, false
 	}
 
-	workspaceID := resolveWorkspaceID(r)
+	workspaceID := h.resolveWorkspaceID(r)
 	if workspaceID == "" {
 		writeError(w, http.StatusBadRequest, "workspace_id is required")
 		return db.Agent{}, false
@@ -405,7 +384,7 @@ func (h *Handler) loadInboxItemForUser(w http.ResponseWriter, r *http.Request, i
 		return db.InboxItem{}, false
 	}
 
-	workspaceID := resolveWorkspaceID(r)
+	workspaceID := h.resolveWorkspaceID(r)
 	if workspaceID == "" {
 		writeError(w, http.StatusBadRequest, "workspace_id is required")
 		return db.InboxItem{}, false

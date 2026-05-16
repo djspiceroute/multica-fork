@@ -68,11 +68,6 @@ func TestCheckMinVersion(t *testing.T) {
 		{"codex", "codex-cli 0.100.0", false},
 		{"codex", "codex-cli 0.99.0", true},
 		{"codex", "codex-cli 0.50.0", true},
-		{"gemini", "0.37.1", false},
-		{"gemini", "0.37.0", false},
-		{"gemini", "0.36.9", true},
-		{"hermes", "0.1.1", false},
-		{"hermes", "0.0.9", true},
 		{"unknown", "1.0.0", false},
 	}
 	for _, tt := range tests {

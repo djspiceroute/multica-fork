@@ -283,6 +283,21 @@ export class ApiClient {
     return this.fetch(`/api/projects/search?${search}`, params.signal ? { signal: params.signal } : undefined);
   }
 
+  async syncGitHubIssues(data: { github_repo: string; state?: "open" | "all" }): Promise<{
+    ok: boolean;
+    repo: string;
+    state: "open" | "all";
+    fetched: number;
+    created: number;
+    updated: number;
+    skipped: number;
+  }> {
+    return this.fetch("/api/github/sync/issues", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  }
+
   async getIssue(id: string): Promise<Issue> {
     return this.fetch(`/api/issues/${id}`);
   }
